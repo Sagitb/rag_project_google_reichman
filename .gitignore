@@ -1,0 +1,25 @@
+# Datasets
+*.csv
+*.zip
+data/
+
+# Course materials
+*.pdf
+*.ppt
+*.pptx
+*.doc
+*.docx
+
+# Notebook cache
+.ipynb_checkpoints/
+
+# Python cache and environments
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Editor and operating system files
+.vscode/
+.DS_Store
+Thumbs.db
