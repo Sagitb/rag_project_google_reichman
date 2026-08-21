@@ -1,0 +1,323 @@
+﻿"ticket_id","issue_type","priority","status","summary","description_raw","background","steps_to_reproduce","expected_behavior","actual_behavior","resolve_description_raw","resolution_summary","qa_criteria","reporter","assignee","created_date","resolved_date"
+"TCKT-001","Story","Medium","Done","Last Email Engagement Sync - stamp Lead/Contact with most recent email activity","Following our last internal conversation with USER_6, the way to do this is an automation on EmailMessage creation that syncs the last email's details up to the lead level.
+
+## Goal
+
+Whenever an EmailMessage is created (outbound send or inbound reply), sync its details onto the related Lead/Contact so each person record always reflects their most recent email engagement. This is a ""latest state"" field set, not a history log.
+
+Expected result:
+
+| Lead/Contact | Engagement Date | Engagement Type | Engagement Text |
+| --- | --- | --- | --- |
+| USER_14 | 08/07/2026 | Email Reply | Lorem ipsum.. |
+| USER_15 | 07/07/2026 | Email Sent | Lorem ipsum.. |
+
+## Scope
+
+Covers native EmailMessage records only (logged threads + real inbound replies via EmailMessageRelation). Salesloft-originated emails logged as Tasks are explicitly out of scope for this ticket - to be addressed separately pending a business discussion with USER_6/CLIENT_A on whether Salesloft engagement should roll up to Lead/Contact.
+
+## Fields - create identically on Lead AND Contact
+
+* `Engagement_Date__c` - DateTime - stamped from `MessageDate` (fallback `CreatedDate` if blank)
+* `Engagement_Type__c` - Restricted Picklist - values: ""Email Sent"", ""Email Reply""
+* `Engagement_Text__c` - Long Text Area (32,768 chars) - truncated email body, `LEFT(TextBody, 32000)`
+
+## Flow logic - record-triggered Flow on EmailMessage (Create, after-save)
+
+* Direction is determined strictly by `Incoming`: `true` -> ""Email Reply"" (person found via `EmailMessageRelation.RelationType = FromAddress`); `false` -> ""Email Sent"" (`RelationType = ToAddress`). Subject line text (e.g. ""Re:"") is not a reliable signal and is not used.
+* Query `EmailMessageRelation` for the triggering EmailMessage filtered by the direction's RelationType; process only rows where `RelationObjectType` is `Lead` or `Contact` (skip `User` and any other type).
+* Only overwrite a person's fields if their current `Engagement_Date__c` is blank or older than the new email's effective date (prevents backfilled/out-of-order emails from clobbering newer engagement).
+* Bulk-safe: no SOQL or DML inside any loop. Collect Lead/Contact IDs during the relation loop, do two `Id IN` lookups after the loop, apply the date guard against those in-memory records, then two bulk Update DML calls at the end.
+
+## Verified during discovery (CLIENT_A org)
+
+* Inbound replies exist as real `EmailMessage` records with `Incoming = true`.
+* `EmailMessageRelation` is populated with Contact/Lead/User IDs; ToAddress/FromAddress mapping holds as expected.
+* Some ""Re:"" subject lines are actually outbound follow-ups (not replies) - confirms direction must come from `Incoming`, not the subject.
+* A sample Lead (USER_12) showed zero `EmailMessageRelation` rows despite visible timeline emails - those were Salesloft-synced Tasks, not EmailMessages. This is the basis for the Salesloft scoping note above.
+
+## Test scenarios (sandbox, pre-prod)
+
+1. Outbound email from a Contact -> Contact gets ""Email Sent"", correct date/body.
+2. Inbound reply from that Contact -> flips to ""Email Reply"" with newer date.
+3. Repeat scenarios 1-2 on a Lead.
+4. Email with an older MessageDate than stored value -> no overwrite (guard works).
+5. Email to an address with no matching Lead/Contact -> no error, nothing updated.
+6. Bulk insert ~200 EmailMessage records via Data Loader -> no SOQL/DML limit errors.","Person records in the CLIENT_A org did not carry any single field set reflecting a person's most recent email engagement. The requirement, agreed in an internal conversation with USER_6, was an automation triggered on EmailMessage creation that stamps the latest email's date, direction and body onto the related Lead or Contact. This is a ""latest state"" field set rather than a history log.
+
+Discovery in the CLIENT_A org confirmed: inbound replies exist as real EmailMessage records with `Incoming = true`; `EmailMessageRelation` is populated with Contact/Lead/User IDs and the ToAddress/FromAddress mapping holds; and some ""Re:"" subject lines are actually outbound follow-ups, so direction cannot be inferred from the subject. A sample Lead (USER_12) showed zero `EmailMessageRelation` rows despite visible timeline emails, because those were Salesloft-synced Tasks rather than EmailMessages - which is why Salesloft-originated Task emails were scoped out of the native EmailMessage flow and handled by a separate Task-based flow.","Defect reproduction on the Task-based flow (Last_Email_Engagement_Sync_Tasks), per the V4 comment:
+1. Let a Salesloft-synced email Task be created against a person record.
+2. Send an inbound reply that lands as a Task on that person's contact record (the live test used USER_1's own contact record).
+3. Inspect `Engagement_Type__c` on the person record.
+
+Direction-signal analysis performed to characterise the defect: sample 30 email Tasks (27 outbound cadence sends, 3 inbound - a reply, a meeting-accept, and the test case) and compare `Description` prefix and `Subject` prefix against known ground truth.","On every EmailMessage creation, the related Lead or Contact is stamped with `Engagement_Date__c` (from `MessageDate`, falling back to `CreatedDate`), `Engagement_Type__c` (""Email Sent"" or ""Email Reply"") and `Engagement_Text__c` (body truncated to 32,000 characters), identically on both Lead and Contact.
+
+Direction must be derived strictly from `Incoming`: true -> ""Email Reply"" via `EmailMessageRelation.RelationType = FromAddress`; false -> ""Email Sent"" via `RelationType = ToAddress`. Only `Lead` and `Contact` relation rows are processed; `User` and other types are skipped.
+
+A date guard must prevent overwrite when the person's existing `Engagement_Date__c` is blank or newer than the incoming email's effective date, so backfilled or out-of-order emails cannot clobber newer engagement. The flow must be bulk-safe with no SOQL or DML inside loops.
+
+For the parallel Task-based flow, an inbound reply logged as a Task should be stamped ""Email Reply"" and a cadence send should be stamped ""Email Sent"".","The initial version of the Task-based flow (Last_Email_Engagement_Sync_Tasks) hardcoded `Engagement_Type__c = ""Email Sent""` for every Salesloft-synced email Task, because Task has no `Incoming` field equivalent to EmailMessage. A live test confirmed an inbound reply to USER_1's own contact record was incorrectly stamped ""Email Sent"".
+
+Subject prefixes (""Email:"", ""Sent Email:"", ""Reply:"") proved unreliable as a direction signal - one inbound task was literally subjected ""Sent Email:..."".
+
+Separately, a sample Lead (USER_12) had zero `EmailMessageRelation` rows despite visible timeline email activity, because those items were Salesloft-synced Tasks rather than native EmailMessage records.","Jira resolution field: Done (resolution set 2026-07-23T11:12:19.503+0300).
+
+NOTE: this Jira instance exposes no free-text `resolve_description` field. The closing narrative below is drawn from the ticket's final comments, which are the only resolution text present in the source.
+
+[Comment - USER_1, 2026-07-22] Tested live V4. Task-based flow (Last_Email_Engagement_Sync_Tasks) corrected and redeployed. Root cause: the initial version hardcoded `Engagement_Type__c = ""Email Sent""` for every Salesloft-synced email Task, with no way to distinguish inbound replies from outbound sends (Task has no `Incoming` field like EmailMessage does). Confirmed via a live test - an inbound reply to USER_1's own contact record was incorrectly stamped ""Email Sent"". Analyzed 30 sample Tasks (27 outbound cadence sends, 3 inbound: a reply, a meeting-accept, and the test case) to find a reliable direction signal. Result: Salesloft-sent emails have a `Description` that begins with the Salesloft tracking URL; received emails never do - they open with `From:` or the reply body instead. Verified 30/30 correct against known ground truth. Deliberately did not use the Subject prefix (""Email:"" / ""Sent Email:"" / ""Reply:"") as the signal, since it's less structurally grounded and inconsistent (one inbound task was literally subjected ""Sent Email:...""). Replaced the hardcoded value with a formula: `IF(BEGINS(Description, ""<SALESLOFT_TRACKING_URL_PREFIX>""), ""Email Sent"", ""Email Reply"")`, wired into both the Lead and Contact field assignments. Deployed as a new Draft version (V3) alongside the existing Active V2, per standard practice - will be re-tested (USER_1's task -> Email Reply, a cadence task -> Email Sent) before activating, at which point V2 deactivates automatically. Rollback path: re-activate V2 from Flow Versions if needed. Known limitation carried forward: a manual (non-cadence) email logged as a Task without the Salesloft URL in its Description would currently be misread as ""Email Reply."" Not observed in the sample set; flagged for awareness, not yet built in as a rule.
+
+[Comment - USER_2, 2026-07-23] Retro backfill completed + reports delivered. Historical email engagement backfilled onto Leads and Contacts, one year back (from 2025-07-23), following the same logic defined in this ticket. Sources (via Salesforce Inspector export -> transform -> Data Import / Update): native `EmailMessage` via `EmailMessageRelation` - replies (`Incoming = true`, `FromAddress`) and sends (`Incoming = false`, `ToAddress`); Salesloft-synced `Task` records (`TaskSubtype = 'Email'`), direction via `BEGINS(Description, ""<SALESLOFT_TRACKING_URL_PREFIX>"")` -> ""Email Sent"", else ""Email Reply"". Processing applied per person: kept the single most recent email across all sources, stamped `Engagement_Date__c` / `Engagement_Type__c` / `Engagement_Text__c` (text truncated to 32,000 chars), and applied the date guard against current values so live-flow data from the last few days was not overwritten. Results: 5,944 Leads and 436 Contacts updated; 1,006 records skipped by the date guard (live value already newer); final type mix 5,946 Email Sent / 434 Email Reply; date range 2025-07-23 -> 2026-07-22. Known limitation (carried forward from the V4 comment): Salesloft emails logged as Tasks without the Salesloft tracking URL in `Description` are classified ""Email Reply"" by the agreed rule. In the retro set 474 such Tasks began with `To:` (look like outbound sends logged without the tracking link). Backfill was kept consistent with the live flow rather than diverging; flagging for awareness in case we want to refine the rule. Reports built (Salesforce), columns First Name, Last Name, Email, Owner, Engagement Date, Engagement Type, Engagement Text: ""Leads with Engagement"" (SYSTEM_Y / RECORD_ID_1) and ""Contacts with Engagement"" (SYSTEM_Y / RECORD_ID_2).","Delivered as two parallel record-triggered flows plus a historical backfill.
+
+Native EmailMessage flow: direction derived from `Incoming`, person resolved through `EmailMessageRelation` (FromAddress for replies, ToAddress for sends), Lead/Contact rows only, date guard before overwrite, bulk-safe with no SOQL or DML in loops.
+
+Task-based flow (Last_Email_Engagement_Sync_Tasks): the hardcoded `Engagement_Type__c = ""Email Sent""` was replaced with `IF(BEGINS(Description, ""<SALESLOFT_TRACKING_URL_PREFIX>""), ""Email Sent"", ""Email Reply"")`, wired into both the Lead and Contact assignments. The Description-prefix signal was chosen over the Subject prefix and verified 30/30 against known ground truth. Shipped as a Draft version alongside the Active version for re-test before activation, with rollback by re-activating the prior version from Flow Versions.
+
+Retro backfill: one year of history (from 2025-07-23) loaded via Salesforce Inspector export, transform, and Data Import/Update, keeping the single most recent email per person across both sources and applying the same date guard. Result: 5,944 Leads and 436 Contacts updated, 1,006 records skipped by the guard, final mix 5,946 Email Sent / 434 Email Reply across 2025-07-23 to 2026-07-22. Two Salesforce reports were delivered (Leads with Engagement, Contacts with Engagement).
+
+Carried-forward limitation: a manual email logged as a Task without the Salesloft tracking URL in `Description` is classified ""Email Reply"" by the agreed rule; 474 such Tasks in the retro set began with `To:` and look like outbound sends. The backfill was kept consistent with the live flow rather than diverging.","Test scenarios (sandbox, pre-prod), per the description:
+1. Outbound email from a Contact -> Contact gets ""Email Sent"" with correct date and body.
+2. Inbound reply from that Contact -> flips to ""Email Reply"" with a newer date.
+3. Repeat scenarios 1-2 on a Lead.
+4. Email with an older MessageDate than the stored value -> no overwrite (date guard holds).
+5. Email to an address with no matching Lead or Contact -> no error, nothing updated.
+6. Bulk insert of ~200 EmailMessage records via Data Loader -> no SOQL or DML limit errors.
+
+Task-based flow acceptance: re-test the corrected Draft version with USER_1's task resolving to ""Email Reply"" and a cadence task resolving to ""Email Sent"" before activating; the direction rule was validated 30/30 against a labelled sample of 30 Tasks.
+
+Backfill verification: 5,944 Leads and 436 Contacts updated, 1,006 records correctly skipped by the date guard, and the delivered reports (First Name, Last Name, Email, Owner, Engagement Date, Engagement Type, Engagement Text) available for inspection.","USER_1","USER_1","2026-07-19T21:02:55.615+0300","2026-07-23T11:12:19.503+0300"
+"TCKT-002","Task","Medium","In Progress","Base-44 CLIENT_B Smart Dashboard","Development of a smart dashboard that lets users ask questions in free Hebrew and receive visual answers directly from Salesforce. The system automatically translates questions into SOQL using AI, retrieves the data and presents it as charts, tables and figures. The dashboard is built on the Base44 platform and connected to CLIENT_B's Salesforce.
+
+[Original Hebrew source text]
+פיתוח דשבורד חכם המאפשר למשתמשים לשאול שאלות בעברית חופשית ולקבל תשובות ויזואליות ישירות מ-Salesforce. המערכת מתרגמת אוטומטית שאלות לשפת SOQL באמצעות בינה מלאכותית, שולפת את הנתונים ומציגה אותם כגרפים, טבלאות ומספרים. הדשבורד נבנה על פלטפורמת Base44 ומחובר ל-Salesforce של CLIENT_B.","CLIENT_B required a natural-language querying dashboard: users ask questions in free Hebrew, an AI model translates them into SOQL against the CLIENT_B Salesforce org, and results render as charts, tables and figures. The dashboard is built on the Base44 platform.
+
+The org's schema uses a managed-package namespace (`NAHPCI__`) for insurance objects such as `NAHPCI__Claim_integrated__c` and `NAHPCI__Policy_AW_IL__c`, alongside custom fields on Lead, Policy and Service Request. Hebrew business terminology overlaps ambiguously with object names - notably ""כתב שירות"" (Policy) versus ""בקשת שירות"" (Service Request) - which is a recurring source of mis-routing in the generated SOQL.
+
+Work to date consists of manual test rounds against the NL-to-SOQL model ahead of a client demo, prompt corrections, deep QA of the AI/SOQL module, and stabilisation of the dashboard UI.","Manual test rounds run against the NL-to-SOQL model ahead of the demo. Reproduce by submitting these Hebrew questions to the dashboard:
+
+1. ""כמה תביעות נפתחו החודש"" (how many claims were opened this month)
+2. ""מי הנציג הכי רווחי שלי"" (who is my most profitable agent)
+3. ""מי הנציג שהלקוחות שלו תובעים הכי הרבה"" / ""ללקוחות שלו יש הכי הרבה תביעות"" (which agent's customers claim the most / have the most claims)
+4. ""איזה כתב שירות עם הכי הרבה צרכים"" (which policy has the most needs)
+
+Additional reproduction paths surfaced during deep QA: request an open-claims view and observe the pool returned; request an age-of-claim value; request a product name; request a conversion-rate figure; request a raw record list with no COUNT/SUM aggregation; submit any query the model chooses to alias.","1. Claim questions route to `NAHPCI__Claim_integrated__c` with no spurious status filter.
+2. Agent profitability aggregates `Lead_Products_Premium_Sum__c` on Lead, filtered by `Seller__c`, grouped by both agent ID and name.
+3. The agent on a claim is the Owner; ""claim the most"" means SUM of claimed amount while ""most claims"" means COUNT.
+4. Claims group by product through `NAHPCI__Policy_AW_IL__r.Product__c`.
+5. ""Open claims"" means the general pool of new claims awaiting handling (`Status = New`), excluding `Postponed` claims and claims already assigned to a carrier (`Claim_Number_At_Carrier__c != NULL`).
+6. Age of claim is measured from `CreatedDate` (claim opening), not from the event date.
+7. Age is read from the insured person (`Insured_Person__r`), not the policy holder (`Policy_Holder__r`).
+8. Product output is human-readable text (`Product__r.Name` / `Name`), not an API ID from a lookup field (`Product__c`).
+9. Conversion-rate output renders as a percentage with a zero-division fallback.
+10. Raw record queries with no COUNT/SUM route to a `table` view.
+11. Generated SOQL contains no field aliasing outside aggregate expressions, and always returns the full agreed column set even when the model optimises the query.
+12. Out-of-schema questions return the `INVALID_REQUEST` fallback.","1. ""How many claims were opened this month"" routed to the Service Request object instead of Claims and added a redundant status filter.
+2. ""Who is my most profitable agent"" failed with `Invalid field`: the query used `Updated_premium_in_production__c`, which exists only on Policy, instead of Lead's `Lead_Products_Premium_Sum__c`.
+3. The two agent-claims questions failed with a relationship error, because the model tried to group claims by `Reseller_Employee__r.Name`, a field that does not exist on the claims object.
+4. ""Which policy has the most needs"" could not be interpreted by the model at all.
+5. Open-claims output was distorted, showing hundreds of historical claims; assignment filtered incorrectly by the logged-in user (`CURRENT_USER_ID`) rather than pulling from the general new-claims pool.
+6. Age of claim was calculated from the event date (`Time_Of_Event__c`) rather than from `CreatedDate`.
+7. Age retrieval crashed when read from the policy holder (`Policy_Holder__r`) instead of the insured person.
+8. Product columns returned raw API IDs from lookup fields instead of readable names.
+9. Conversion-rate calculation collapsed to 100% or displayed a raw ""0"" with no % symbol.
+10. Raw record queries with no aggregation attempted a horizontal bar chart with no aggregate data and crashed the UI.
+11. Generated SOQL hit the Salesforce error `only aggregate expressions use field aliasing` from implicit and explicit aliases such as `AS customer` or `Name name`.
+12. Long result lists broke the table display, the raw `Id` column was exposed to users, there was no total-record count, and no column sorting.
+13. Code review of the new raw-SOQL prompt found internal contradictions: GROUP BY rules inconsistent with the worked examples, and the commission field placed on a different object than the example used.","N/A - ticket is In Progress with no Jira resolution set and no resolution date. This Jira instance also exposes no free-text `resolve_description` field. Progress narrative exists only in the comment thread and is reorganised into the derived resolution_summary column.","No formal resolution - the ticket is In Progress. The following is the documented progress from the comment thread (2026-06-09 to 2026-06-12), not a closure statement.
+
+Prompt and schema fixes: ""claim/claims"" remapped directly to `NAHPCI__Claim_integrated__c` and rule 12 narrowed to apply only to service/retention requests; agent profitability switched to `Lead_Products_Premium_Sum__c` on Lead with a `Seller__c` filter and GROUP BY on both ID and name; rule 13 added stating that a claim's agent is the Owner, distinguishing SUM of claimed amount from COUNT of claims; a verified example added for grouping claims by product via `NAHPCI__Policy_AW_IL__r.Product__c`. All 23 claim status values and 15 sub-status values were validated and embedded, deliberately preserving the original picklist misspellings (`Ducument`, `chek`, `garage`), as were the claim lookup relationship names (`NAHPCI__Carrier__r.Name`, `NAHPCI__Account__r.Name`). A naming clarification was added separating ""כתב שירות"" (Policy) from ""בקשת שירות"" (Service Request).
+
+New raw-SOQL generator prompt: a separate prompt version producing raw SOQL, with an org-specific schema and a ""CRITICAL ORG RULES"" block consolidating the test findings. It went through three correction iterations after a code review found internal contradictions. The final version includes an `INVALID_REQUEST` fallback for out-of-schema questions and separates agent ranking by sales (Lead) from ranking by commission (Policy/Owner).
+
+Business-logic and data-integrity fixes: hard filter on the open-claims pool excluding `Postponed` and `Claim_Number_At_Carrier__c != NULL`; assignment corrected from `CURRENT_USER_ID` to the general `Status = New` pool; age-of-claim source changed from `Time_Of_Event__c` to `CreatedDate`; age read from `Insured_Person__r` rather than `Policy_Holder__r`; product names forced to `Product__r.Name` / `Name`; zero-division fallback added to conversion-rate calculation.
+
+UI fixes: total record count added to table headers, max-height plus scroll to prevent display collapse on long lists, dynamic column sorting with emphasis on dates, raw `Id` column hidden and customer/claim names turned into deep links into Salesforce, and automatic chart-type routing sending non-aggregated queries to `table`.
+
+AI-stabilisation fixes: SOQL aliasing crashes resolved through explicit few-shot examples removing implicit and explicit aliases; hard column control forcing the LLM to return the full column set even when optimising.
+
+Current state: the original prompt was corrected and published and the first five issues closed. Remaining: work through the rest of the question backlog (~150) to identify further failure patterns before the demo.","QA performed and criteria implied by the comment thread:
+
+Deep QA of the AI-to-Salesforce querying module covering data validation, SOQL corrections, UI behaviour and prompt engineering across dozens of edge cases that could have failed end users in production.
+
+Per-question regression: each of the four failing Hebrew questions must return correct results after the prompt fix - claims routed to `NAHPCI__Claim_integrated__c`, agent profitability computed from `Lead_Products_Premium_Sum__c`, claim-agent grouping via Owner with SUM versus COUNT correctly distinguished, and product grouping via `NAHPCI__Policy_AW_IL__r.Product__c` (this query was validated against live data and returned valid results).
+
+Schema validation: all 23 claim status values and 15 sub-status values verified against the org, including the original picklist misspellings; claim lookup relationship names verified.
+
+Prompt validation: three correction iterations after code review, checking GROUP BY rules against the worked examples and the commission field against the object used in the example; `INVALID_REQUEST` fallback must fire for out-of-schema questions.
+
+Outstanding acceptance work: run the remaining question backlog (~150) to surface further failure patterns before the demo.","USER_3","N/A","2026-05-19T13:02:20.535+0300","N/A"
+"TCKT-003","Task","Medium","Backlog","Credits/Conversions - CLIENT_C accounting","Hi, following up on my return this week I'm writing a summary email here so it's organised and we can continue the correspondence on this topic from here. Recording of the call: RECORDING_URL_1
+
+Tasks:
+
+1. Build a credits and conversions process in Salesforce - create a new Opportunity for every credit or conversion, linked to the original Opportunity, with appropriate statuses and tracking fields.
+2. Add a button and Screen Flow on Opportunity - a Refund / Convert button that launches a Flow from the original deal and guides the user through selecting a contract, a new product, or a quantity to credit.
+3. Full conversion automation including manager approval - on conversions: calculate lead quantity by the new product, check the price difference, require manager approval if it exceeds the threshold USER_7 will define, create a new Opportunity/Contract, update the original record and cancel the original deal in iCount via API.
+4. Credit process with manual handling by USER_8 - on credit creation: open a new Opportunity with a negative value, update the status of the original record, and surface the record in a dedicated work list for USER_8 until it is marked Refund Complete after manual execution in iCount.
+5. Update sales, commission and control reports - update the sales report so it reflects true value after credits/conversions, build a Cancelled Invoices report, and run a weekly reconciliation with USER_8 between Salesforce and iCount.
+6. Block customer notifications on negative deals - add a filter in Vitro / the notifications mechanism to prevent WhatsApp messages on credits, conversions or negative deals.
+
+---
+
+Please review and confirm this is indeed the direction we agreed.
+
+We agreed there are two possible processes: credit or conversion. In both cases we take the old Opportunity and stop all its contracts. In addition we need to stop the old Opportunity itself so it does not keep generating new contracts.
+
+In the case of a conversion we will also create a new Opportunity for separation. The reason is to keep data clean and separate the original sales process from a Customer Success process that happens after the customer has already bought and then asked to change or convert.
+
+In the case of a credit we need to understand the credit-invoice issuance process more deeply - whether it should happen automatically from the system, or whether USER_8 performs it manually.
+
+System-wise we need a new Opportunity Stage value called ""הומר"" (Converted), classified under Closed Won. We will also create a CB field ""הומר/זוכה"" (Converted/Credited) displayed at the top of the original Opportunity Layout, so it is clear what happened to the opportunity and why its contracts were stopped.
+
+Tracking fields will of course be created, for example: number of leads credited; credit amount; handling / systems-connection fee charged to the customer; number of leads converted; conversion amount; link to the original opportunity from which the conversion was made; and on the contract, a link to the original contract from which the conversion was made.
+
+---
+
+One point of clarification: USER_8 will receive on a REPORT screen all the Opportunities created for credit/conversion.
+
+Credit - USER_8 is the one who performs the accounting action of issuing a negative tax invoice (credit), so he understands the action he needs to take in terms of money and leads via the report screen built for him.
+
+Conversion - this is an internal action with no accounting action on our side, so USER_8 only approves it and moves the contracts into operations after the conversion.
+
+We need to arrange with USER_11 to place the credit tax invoice into the original QUOTE of the Opportunity from which the credit originated, because the new Opportunity that will be created will have no accounting event and no Quote issued at all on that sales opportunity.
+
+[Original text was authored in Hebrew; the above is a faithful rendering with identifiers replaced. Original Hebrew retained below.]
+
+היי בהמשך לחזרה שלי השבוע אני רושם פה מייל סיכום שיהיה מסודר שנוכל להמשיך מפה התכתבות בעניין הזה, להלן הקלטה של השיחה: RECORDING_URL_1
+
+להלן משימות:
+
+1. בניית תהליך זיכויים והמרות ב-Salesforce - יצירת Opportunity חדשה לכל זיכוי או המרה, עם קישור ל-Opportunity המקורית, סטטוסים מתאימים ושדות רלוונטיים למעקב.
+2. הוספת כפתור ו-Screen Flow על Opportunity - הוספת כפתור Refund / Convert שיפעיל Flow מהעסקה המקורית וינחה את המשתמש בבחירת חוזה, מוצר חדש או כמות לזיכוי.
+3. אוטומציית המרות מלאה כולל אישור מנהל - בהמרות: חישוב כמות לידים לפי המוצר החדש, בדיקת הפרש מחיר, דרישת אישור מנהל אם יש חריגה מה-threshold ש-USER_7 יגדיר, יצירת Opportunity/Contract חדשים, עדכון הרשומה המקורית וביטול העסקה המקורית ב-iCount דרך API.
+4. תהליך זיכויים עם טיפול ידני של USER_8 - ביצירת זיכוי: פתיחת Opportunity חדשה עם ערך שלילי, עדכון הסטטוס של הרשומה המקורית, והצגת הרשומה ברשימת עבודה ייעודית ל-USER_8 עד לסימון Refund Complete לאחר ביצוע ידני ב-iCount.
+5. עדכון דוחות מכירות, עמלות ובקרות - עדכון דוח המכירות כך שישקף ערך אמיתי לאחר זיכויים/המרות, בניית דוח Cancelled Invoices, וביצוע בקרה שבועית מול USER_8 להתאמה בין Salesforce ל-iCount.
+6. חסימת התראות ללקוח על עסקאות שליליות - הוספת פילטר ב-Vitro / מנגנון ההתראות כדי למנוע שליחת WhatsApp על זיכויים, המרות או עסקאות שליליות.
+
+מבחינת המערכת, נצטרך ליצור ערך חדש של Stage בOpportunity בשם ""הומר"", ולסווג אותו תחת Closed Won. בנוסף, ניצור שדה CB של ""הומר/זוכה"" שנציג בחלק העליון של הLayout של הOpportunity המקורי.","CLIENT_C needed a structured credits (זיכויים) and conversions (המרות) process in Salesforce, replacing an ad-hoc manual practice run by the office manager and reconciled by hand against the iCount accounting system.
+
+Agreed model: in both credit and conversion cases the original Opportunity and all its contracts are stopped so no further contracts are generated. A conversion additionally creates a new Opportunity to keep data clean and separate the original sales process from the post-sale Customer Success change. A credit is an accounting action - USER_8 issues a negative tax invoice manually in iCount and works from a dedicated report screen; a conversion is internal with no accounting event, so USER_8 only approves it and moves the new contracts into operations. The credit tax invoice must be placed on the original Opportunity's Quote (coordinated with USER_11), because the newly created Opportunity carries no accounting event and no Quote.
+
+Scoping answers captured in the thread: partial credits and partial conversions are allowed (part of a contract's quantity); a credit can cover only some contracts within an Opportunity (e.g. 2 of 4 products); combining a credit and a conversion on the same source is a rare edge case but possible (e.g. 50% credited, 50% converted). Credits and conversions do not apply to contracts in IN PROGRESS (typically unpaid); they normally apply to STOPPED or WAITING FOR START, and once automated also to ACTIVE, since the button stops the contract before acting. The hedge field `Additional_Percentage_to_Quantity__c` must be stripped out of any credit or conversion calculation, since hedged leads are effectively a gift and are not credited. A fixed handling / systems-connection fee of 350 NIS is deducted from credit amounts, with VAT applied on top.
+
+The work then split into a phase 2: a dynamic N:M ""money pool"" model, estimated at roughly 80 hours, replacing the rigid 1:1 conversion.","N/A","Phase 1 (agreed scope): a Refund / Convert button and Screen Flow on Opportunity; a new Opportunity per credit or conversion linked to the original; a new Opportunity Stage value ""הומר"" (Converted) classified under Closed Won; a CB field ""הומר/זוכה"" at the top of the original Opportunity layout; tracking fields for leads credited, credit amount, handling fee, leads converted, conversion amount, link to the original opportunity, and on the contract a link to the original contract; manager approval when a conversion price difference exceeds the threshold USER_7 defines; cancellation of the original deal in iCount via API; a dedicated report screen listing all credit/conversion Opportunities for USER_8; a Cancelled Invoices report and a sales report reflecting true post-credit value; a weekly Salesforce-to-iCount reconciliation; and a filter in Vitro to suppress WhatsApp notifications on credits, conversions and negative deals.
+
+Refund calculation: refund amount for undelivered leads = remaining leads x price per lead, with the hedge field `Additional_Percentage_to_Quantity__c` removed, less a 350 NIS handling and systems-connection fee, plus VAT.
+
+Phase 2: a dynamic model treating contracts as a ""money pool"" with money as the common denominator across contracts at different lead prices, supporting N:M conversions (many-to-one, one-to-many, many-to-many), with a full audit trail via three record-keeping objects (`Conversion__c` header, `Conversion_Source__c`, `Conversion_Target__c`) and a joined report showing, per conversion, how many leads were deducted and how much money each source contract contributed against what was created on the target side. Allocation must balance exactly against the pool total before any DML runs.","Refund reporting: the refund amount did not calculate correctly in the report until `Quantity Routed` and `Price per Lead` were added as columns. A live test on the CLIENT_E account then confirmed the logic (94 leads x 50 NIS per lead = 4,700 NIS).
+
+Phase 1 conversion model limitations, per the June 15 review: the 1:1 conversion model is too rigid for the business, forcing inefficient multi-step processes for scenarios such as converting one product into several - the CLIENT_F opportunity required splitting one product's unused budget into two new products (50% to ""Loan Leads"", 50% to ""All-Purpose Loan Budget""). The system cannot track conversions for non-lead items such as ad budgets, because its logic is tied to the `Quantity` field. The data model is overwritten on each conversion, destroying the audit trail and making a contract's full history impossible to reconstruct. The standard Contract object does not support the required change. Operationally the manual process is a bottleneck for the end user (USER_10).
+
+Open issues found during the V34 test round: new `Contract__c` records created by a conversion have required fields with no logical carry-over from the sources - `Max_leads_per_period__c` (currently hardcoded to 1), `Deviation` and `Number Of Leads` have no correct value to inherit when, for example, two contracts convert into one. Error and validation messages are currently phrased for the implementation team rather than the day-to-day end user.","N/A - ticket is in Backlog with no Jira resolution set and no resolution date. This Jira instance also exposes no free-text `resolve_description` field. The delivery narrative below exists only in the comment thread and is reorganised into the derived resolution_summary column.
+
+Key source comments: scoping Q&A (USER_2, 2026-03-23); modular conversion model spec attached (USER_4, 2026-06-07); June 14 call summary on refund logic validation and the complex-conversion need (USER_1); June 15 call summary selecting the money-pool model and Screen Flow implementation at ~80 hours (USER_1); V34 deployment note and open questions emailed to USER_7 (USER_1, 2026-07-06); and full V34 flow documentation plus STP attachment (USER_1, 2026-07-06).","Not resolved - status Backlog. The following summarises delivery state as documented in the comments.
+
+Refund logic was validated live and corrected by adding `Quantity Routed` and `Price per Lead` to the report; the calculation then produced the expected figure (94 leads x 50 NIS = 4,700 NIS), and USER_7 was to train USER_8 on the validated process.
+
+For phase 2, the team compared two implementations: Alternative A, a low-code Screen Flow (lower long-term maintenance, less dynamic UI - a live balance needs a ""Next"" click to refresh), and Alternative B, a custom Lightning Web Component (highly dynamic single-screen UI, higher maintenance). Alternative A was chosen to minimise maintenance, accepting the minor UI trade-offs. The project was estimated at approximately 80 hours pending review by USER_7 and USER_9.
+
+Version 34 of `Convert_Refund_Opportunity_Button` (Screen Flow, Active, API version 67, entry point a button on the Opportunity taking recordId) was deployed and is running in the environment. One flow with two branches selected on the first screen:
+
+Convert branch - Phase A source contribution: the user selects source contracts in a Data Table filtered to not-finished contracts; per contract the screen shows available balance (`Total_Sum_For_Payment__c` minus `Quote_Amount__c`), available leads and price per lead; the user either checks ""Contribute Full Balance (Max)"" or enters a manual amount, with a blank amount looping back; a live preview shows leads to deduct (full balance takes all actual leads, partial takes FLOOR(contribution / price per lead)); each contribution is added to `var_PoolTotalValue` and held in memory as a `Conversion_Source__c` row, with full-balance sources flagged `Fully_Consumed = TRUE`. Phase B target definition: a repeating screen showing pool total and remaining amount, capturing Product, Price Per Lead and Amount to Allocate per target, with a leads preview of FLOOR(allocated / price per lead). Phase C balance validation: a hard gate requiring total allocated to equal the pool total exactly (`Decision_PoolIsBalanced`), with a mismatch screen showing both totals and the difference before returning to target definition; no DML runs before this gate passes. Phase D commit: create the `Conversion__c` header (Status Draft, `Total_Pool_Value__c`, `Original_Opportunity__c`, `Conversion_Date__c`); loop targets creating a child Opportunity (Closed Won, `From_Converted_Opportunity__c = TRUE`, named Account + date), a `Contract__c` per target (Status ""waiting for start"", Quantity = floored leads, `Max_leads_per_period__c` hardcoded to 1) and a `Conversion_Target__c` row; update child Opportunity Amount to the sum of price per lead x leads created; loop sources re-querying each contract and applying the deviation rule (if `deviation__c` > 0 deduct leads from `deviation__c`, otherwise from `Quantity__c`), add to `Reducted_Leads_Amount__c`, set Status ""Finished - Convert"" if fully consumed, and create the `Conversion_Source__c` row; set the header Status to Committed and link `Child_Opportunity__c`; update the original Opportunity with `Converted_Refunded__c = TRUE` and the `Converted_Opportunity__c` link; and show a finish screen reminding the user to configure Max Leads per Period before routing begins.
+
+Refund branch - the user selects contracts and chooses Leads Amount or Price. Leads Amount takes a lead count or Max Leads, applies rounding subflow components and the same deviation rule. Price takes a refund amount or Max Price, computes leads as CEILING(amount / actual price per lead), and creates a refund `Quote_c__c` (Type Refund, Payment_Status Open, negative amount net of handling fees, VAT at x1.18). Optional handling fees create a dedicated fee `Contract__c` (Quantity 1, Price_per_lead = fee amount, Status ""Finished - Refund"", fixed handling-fee product). A full refund consumes the entire balance and flags the Opportunity as Converted_Refunded.
+
+Key formulas: balance = `Total_Sum_For_Payment__c` - `Quote_Amount__c`; actual lead quantity = Quantity adjusted by `Additional_Percentage_to_Quantity__c` (hedge extraction); source leads deducted = all leads on full contribution, FLOOR(contribution / price per lead) on partial; target leads created = FLOOR(allocated amount / target price per lead); final refund amount by Price = -1 x (balance - handling fees) x 1.18.
+
+Data model created: `Conversion__c`, `Conversion_Source__c`, `Conversion_Target__c`, child Opportunity, `Contract__c` per target plus a fee contract on refund, and `Quote_c__c` refund quote. Updated: source `Contract__c` (Quantity/deviation, `Reducted_Leads_Amount__c`, Status), original Opportunity, child Opportunity and the `Conversion__c` header. The three Conversion objects are record-keeping only, populated exclusively by this flow, and feed a joined report pairing Conversion Source against Conversion Target.
+
+Blocked on two client decisions before final QA: (1) how to populate required fields on new contracts with no logical carry-over - a per-target input on the conversion screen versus a default value plus manual edit before activation (the team recommended the default-plus-manual option as significantly simpler, and a finish-screen reminder is already in place); and (2) the wording and language of error and validation messages for the end user.","A comprehensive test round was run across all conversion scenarios - merge (many-to-one), split (one-to-many) and multiple (many-to-many) - on V34 in the environment, with a detailed STP attached to the ticket for final QA and client-side documentation.
+
+Validated: refund calculation confirmed live on the CLIENT_E account, producing 94 leads x 50 NIS = 4,700 NIS after `Quantity Routed` and `Price per Lead` were added to the report.
+
+Acceptance criteria evident from the flow specification: allocation must balance exactly against the pool total before any DML executes (`Decision_PoolIsBalanced` hard gate), with a mismatch surfacing both totals and the difference and returning the user to target definition; a blank manual contribution amount must loop back to the same screen; source deduction must follow the deviation rule (deduct from `deviation__c` when greater than zero, otherwise from `Quantity__c`); fully consumed sources must be set to ""Finished - Convert""; the joined report must show, per conversion, leads deducted and money contributed per source against what was created on the target side.
+
+Final QA is gated on the two open client decisions (required-field handling on new contracts, and error-message wording/language).","USER_2","N/A","2026-03-23T09:25:03.694+0200","N/A"
+"TCKT-004","Task","Medium","In Progress","New Project: ABM Intent customer field in SF at Account level","I'm following up on our conversation last week regarding the need to create a new account-level field in SF to capture intent data to support our ABM efforts.
+
+There's 2 things that needs to happen:
+
+1. Create custom field in SF
+2. Completing the engine so that all relevant accounts that meet specific criteria receive the ABM Intent data in the custom field. [NOTE: REQUIRES DEV WORK]
+
+/// CREATE CUSTOM FIELD ///
+Need a new custom field on Account for the Intent Engine project - full spec attached (sf_admin_field_spec.md), summary below:
+
+* Type: Rich Text Area
+* API Name: Intent_Signal__c
+* Character limit: 131,072 (the platform max) - please set this explicitly, not a smaller default. We got burned once already by Technologies__c truncating silently because its limit was too small, want to avoid a repeat.
+* Field-level security: visible to AE/Sales/Sales Leadership profiles. Doesn't need to be editable by any human - it'll be written to by an automated process only.
+* Page layout: please do your best to resemble the example ABM Intent HTML file (zipped in this email).
+
+This is the one piece blocking the automated write step from being testable - everything else on our side (the data pulls, scoring) can be built independently, but nothing can actually land in Salesforce until this field exists.
+
+No rush on the field-level security specifics if you want to start with something conservative - we can adjust visibility later once we see it working. The type, API name, and character limit are the parts that matter most to get right up front.
+
+/// ESTABLISH AUTOMATION OF DATA WITHIN CUSTOM FIELD IN SF ///
+
+Handing off the next piece of the CLIENT_D Intent Engine - getting account signal summaries writing automatically into a Salesforce field, daily, for our full filtered account list (currently 383 accounts).
+
+What exists already (attached, zipped):
+
+* daily_pipeline_sketch.py: shows how everything wires together end to end
+* hubspot_warm_signal.py: working, pulls HubSpot engagement/lifecycle data
+* zoominfo_signals.py: working, pulls ZoomInfo news/intent/scoops + a required web search (don't remove the web search call - skipping it has caused real bugs before)
+* abm_scoring.py: working, scores accounts Hot/Warm/Cold based on engagement type x job title weight
+* salesforce_write.py: working, writes to the Salesforce field (defaults to dry-run on purpose - see below)
+* developer_handoff_spec.md: the full write-up, read this first
+
+What's NOT done yet, and I need your help:
+
+1. Wire in real credentials for HubSpot, ZoomInfo, a web search provider, and Salesforce (none of this code has live auth in it)
+2. Extend intent_signal_runner.py's render_message() to actually use the new sections (ABM score, Dodge awards, news, recommended contacts) - it currently only handles the older permits/violations/warm sections
+3. Test end to end, starting in dry-run mode
+4. Set up the scheduler (I'm handling the GitHub Actions setup myself, in parallel - let me know once your code is ready and I'll point the workflow at it)
+
+One hard rule: the Salesforce write step must stay in dry-run (no real writes) until I explicitly tell you to flip it live. Don't hardcode that switch to off - make it something I control per run via GitHub.
+
+/// TURNING ON/OFF AUTOMATION ///
+
+I'm setting up the GitHub Actions side (repo is REPO_1). I've got the workflow file, the daily schedule, and the on/off switch for live writes all set up on my end. Before I can finish wiring in credentials, I need a few things from you:
+
+1. The exact names of the environment variables your code reads for each credential - for example, does your code expect HUBSPOT_API_KEY, or something else? Same question for ZoomInfo, the web search provider, and Salesforce (username/password/security token, or does it use a different auth method?). Whatever you name them in code, I need to set up GitHub Secrets with those exact same names or the code won't find them.
+
+Examples you might use...
+
+* `HUBSPOT_API_KEY`
+* `ZOOMINFO_API_KEY`
+* `SALESFORCE_USERNAME`
+* `SALESFORCE_PASSWORD`
+* `SALESFORCE_SECURITY_TOKEN`
+
+2. The exact filename of the script GitHub should run (I guessed daily_pipeline.py in my workflow file as a placeholder - let me know the real one).
+
+3. A requirements.txt file listing whatever Python packages your code needs installed, so GitHub can set up the environment correctly before running it.
+
+Let me know what questions come up - happy to do a sync on Tuesday per our usual time. Please make sure to review everything by then and invite anyone on the team to discuss in the meeting.","CLIENT_D is building an ABM (account-based marketing) Intent Engine and needs account-level intent data surfaced inside Salesforce. Two pieces are required: a new custom field on Account, and completion of the engine so every account meeting the defined criteria receives ABM Intent data in that field, daily, across the current filtered list of 383 accounts.
+
+Existing, working code handed off (zipped with the ticket): `daily_pipeline_sketch.py` showing the end-to-end wiring; `hubspot_warm_signal.py` pulling HubSpot engagement and lifecycle data; `zoominfo_signals.py` pulling ZoomInfo news, intent and scoops plus a required web search call; `abm_scoring.py` scoring accounts Hot/Warm/Cold on engagement type by job-title weight; and `salesforce_write.py`, which writes to the Salesforce field and defaults to dry-run deliberately. Full written specs are attached as `sf_admin_field_spec.md` and `developer_handoff_spec.md`.
+
+Scheduling is being set up in parallel by USER_5 via GitHub Actions in REPO_1, with the workflow file, daily schedule and live-write on/off switch already in place on that side.","N/A","Custom field on Account: type Rich Text Area, API name `Intent_Signal__c`, character limit explicitly set to 131,072 (the platform maximum) rather than a smaller default. Field-level security visible to AE, Sales and Sales Leadership profiles; it does not need to be human-editable since only an automated process writes to it. Page layout should resemble the example ABM Intent HTML file supplied. Type, API name and character limit are the parts that must be right up front; field-level security can start conservative and be widened later.
+
+Automation: account signal summaries write automatically into the Salesforce field daily for the full filtered list of 383 accounts. Live credentials must be wired in for HubSpot, ZoomInfo, a web search provider and Salesforce. `render_message()` in `intent_signal_runner.py` must be extended to use the new sections (ABM score, Dodge awards, news, recommended contacts). End-to-end testing starts in dry-run mode.
+
+Hard rule: the Salesforce write step stays in dry-run with no real writes until USER_5 explicitly says to flip it live, and the switch must not be hardcoded off - it must be controllable per run via GitHub.
+
+The web search call in `zoominfo_signals.py` must not be removed.
+
+Handoff back to USER_5 must include: the exact environment-variable names the code reads for each credential (so matching GitHub Secrets can be created), the exact filename of the script GitHub Actions should run, and a `requirements.txt` listing the required Python packages.","The field does not yet exist, which is the single item blocking the automated write step from being testable - the data pulls and scoring can be built independently, but nothing can land in Salesforce until the field is created.
+
+A prior incident is cited as the reason for setting the character limit explicitly: `Technologies__c` truncated silently because its limit was set too small.
+
+`render_message()` in `intent_signal_runner.py` currently handles only the older permits, violations and warm sections, and does not use the newer ABM score, Dodge awards, news or recommended-contacts sections.
+
+None of the handed-off code contains live authentication for HubSpot, ZoomInfo, the web search provider or Salesforce.
+
+USER_5's workflow file currently uses `daily_pipeline.py` as a placeholder script name, which has not been confirmed as the real entry point.","N/A - ticket is In Progress with no Jira resolution set, no resolution date, and no comments on the issue. This Jira instance also exposes no free-text `resolve_description` field.","N/A","Testing must run end to end starting in dry-run mode, with no real Salesforce writes until USER_5 explicitly authorises going live; the dry-run switch must be controllable per run via GitHub rather than hardcoded.
+
+Field acceptance: `Intent_Signal__c` created on Account as a Rich Text Area with the character limit explicitly set to 131,072 and no silent truncation (the `Technologies__c` incident is the stated regression to avoid), visible to AE/Sales/Sales Leadership profiles, and laid out to resemble the supplied example ABM Intent HTML file.
+
+Pipeline acceptance: the web search call in `zoominfo_signals.py` must remain in place, since removing it has caused real bugs before; `render_message()` must render the ABM score, Dodge awards, news and recommended-contacts sections; the daily run must cover the full filtered list of 383 accounts.
+
+Handoff acceptance: environment-variable names supplied must match the GitHub Secrets exactly or the code will not find them; the real script filename must be confirmed against the workflow placeholder; a `requirements.txt` must be provided so the GitHub environment installs correctly.
+
+Review checkpoint: everything reviewed ahead of the regular Tuesday sync.","USER_5","N/A","2026-08-10T10:14:26.623+0300","N/A"
