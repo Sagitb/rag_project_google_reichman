@@ -1,25 +1,178 @@
-# Datasets
-*.csv
-*.zip
-data/
+# ============================================================
+# jiRAG — Git Ignore
+# ============================================================
 
-# Course materials
+# ----------------------------
+# Datasets
+# ----------------------------
+
+# Ignore dataset formats by default
+*.csv
+*.tsv
+*.zip
+*.parquet
+*.pkl
+*.pickle
+*.jsonl
+
+# Allow required data directories
+!data/
+!data/raw/
+!data/seeds/
+!data/processed/
+!data/splits/
+!data/evaluation/
+!data/manifests/
+
+# Ignore raw data by default
+data/raw/*
+
+# Version the official final dataset
+!data/raw/jira_rag_master_FINAL_1000.csv
+
+# Version reviewed seed datasets
+data/seeds/*
+!data/seeds/*.csv
+
+# Version approved processed datasets
+data/processed/*
+!data/processed/tickets_clean_v*.csv
+
+# Version deterministic dataset splits
+data/splits/*
+!data/splits/*.csv
+!data/splits/*.json
+
+# Version evaluation datasets
+data/evaluation/*
+!data/evaluation/*.csv
+!data/evaluation/*.json
+!data/evaluation/*.jsonl
+
+# Version manifests and metadata
+!data/manifests/*.json
+
+
+# ----------------------------
+# Generated ML/RAG artifacts
+# ----------------------------
+
+vector_store/
+checkpoints/
+models/
+logs/
+exports/
+
+# Common model and index files
+*.faiss
+*.index
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+
+# Experiment tracking
+wandb/
+mlruns/
+lightning_logs/
+
+
+# ----------------------------
+# Generated reports
+# ----------------------------
+
+reports/figures/
+reports/data_qa/
+reports/evaluation/
+
+
+# ----------------------------
+# Secrets and credentials
+# ----------------------------
+
+.env
+.env.*
+!.env.example
+
+credentials.json
+token.json
+secrets.json
+service_account.json
+
+*.pem
+*.key
+
+# Colab/Jupyter secrets must never be committed
+.streamlit/secrets.toml
+
+
+# ----------------------------
+# Course and reference materials
+# ----------------------------
+
 *.pdf
 *.ppt
 *.pptx
 *.doc
 *.docx
 
-# Notebook cache
-.ipynb_checkpoints/
 
+# ----------------------------
+# Jupyter and Colab
+# ----------------------------
+
+.ipynb_checkpoints/
+sample_data/
+
+
+# ----------------------------
 # Python cache and environments
+# ----------------------------
+
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
 .venv/
 venv/
+env/
 
-# Editor and operating system files
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+
+# ----------------------------
+# Package and model caches
+# ----------------------------
+
+.cache/
+huggingface/
+transformers_cache/
+torch_cache/
+
+
+# ----------------------------
+# Editor and operating system
+# ----------------------------
+
 .vscode/
+.idea/
+
 .DS_Store
 Thumbs.db
+desktop.ini
+
+
+# ----------------------------
+# Temporary and backup files
+# ----------------------------
+
+*.tmp
+*.temp
+*.bak
+*.log
+*~
