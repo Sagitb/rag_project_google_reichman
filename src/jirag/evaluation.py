@@ -85,8 +85,16 @@ class BGEReranker:
 
     def search(self, query: str, candidates: list[dict[str, Any]], top_k: int):
         import torch
+        if any(
+            not isinstance(item.get("search"), dict)
+            or not item["search"].get("embedding_text")
+            for item in candidates
+        ):
+            raise RuntimeError(
+                "Reranker candidates must contain search.embedding_text"
+            )
         self.load()
-        pairs = [(query, item["content"]["embedding_text"]) for item in candidates]
+        pairs = [(query, item["search"]["embedding_text"]) for item in candidates]
         scores = []
         for start in range(0, len(pairs), self.batch_size):
             encoded = self.tokenizer(
