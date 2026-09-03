@@ -7,6 +7,7 @@ from .documents import ensure_rag_documents, load_jsonl
 from .eda import ensure_eda_artifacts
 from .embedding_selection import ensure_embedding_model_selection
 from .paths import build_project_paths, create_artifact_directories
+from .retrieval import RetrievalEngine, load_retrieval_contract, results_to_dataframe
 from .splitting import ensure_dataset_splits
 from .vector_store import ensure_vector_store
 
@@ -23,6 +24,9 @@ __all__ = [
     "ensure_vector_store",
     "load_dataset_contract",
     "load_jsonl",
+    "load_retrieval_contract",
+    "RetrievalEngine",
+    "results_to_dataframe",
     "save_config_snapshot",
     "set_global_seed",
     "write_run_metadata",

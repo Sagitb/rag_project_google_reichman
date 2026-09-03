@@ -1,0 +1,22 @@
+{
+  "contract_version": "retrieval_v1",
+  "default_top_k": 5,
+  "maximum_top_k": 1000,
+  "open_statuses": [
+    "To Do",
+    "In Progress"
+  ],
+  "operational_filter_fields": [
+    "document_id",
+    "component",
+    "status",
+    "priority",
+    "work_type",
+    "is_open"
+  ],
+  "internal_evaluation_fields": [
+    "family",
+    "solution_type",
+    "split"
+  ]
+}
