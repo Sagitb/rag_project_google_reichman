@@ -1,0 +1,11 @@
+# PyTorch is intentionally omitted: Colab supplies a CUDA-compatible build.
+numpy>=2.0,<3
+pandas>=2.2,<3
+scikit-learn>=1.5,<2
+matplotlib>=3.8,<4
+seaborn>=0.13,<1
+psutil>=5.9,<8
+sentence-transformers>=3.0,<6
+faiss-cpu>=1.8,<2
+transformers>=5.0,<6
+accelerate>=1.0,<2
