@@ -1,0 +1,222 @@
+[
+  {
+    "query_id": "Q-EN-01",
+    "language": "en",
+    "query": "Why does an aggregate question with no matching records sometimes appear as a blank answer, and what temporary handling was added?",
+    "gold_ticket_ids": [
+      "tckt-0747"
+    ],
+    "gold_rationale": "The ticket explains that a null-valued aggregate row is rendered as a blank entry and documents the temporary explanatory wording.",
+    "query_type": "cause_and_workaround"
+  },
+  {
+    "query_id": "Q-EN-02",
+    "language": "en",
+    "query": "Why were current operational record counts higher than the figures in the dashboards, and how was the filtering corrected?",
+    "gold_ticket_ids": [
+      "tckt-0345"
+    ],
+    "gold_rationale": "The ticket traces inflated counts to archived records and describes the new default lifecycle filter and disclosure in answers.",
+    "query_type": "root_cause_and_resolution"
+  },
+  {
+    "query_id": "Q-EN-03",
+    "language": "en",
+    "query": "One analytics consumer is missing a small percentage of published order events while the other consumers receive them. Has the cause been found, and what should happen next?",
+    "gold_ticket_ids": [
+      "tckt-0144"
+    ],
+    "gold_rationale": "The ticket concerns one of three subscribers missing about one percent of events, states that no verified cause exists, and specifies the next diagnostic step.",
+    "query_type": "unresolved_status_and_next_step"
+  },
+  {
+    "query_id": "Q-EN-04",
+    "language": "en",
+    "query": "How should a partner correlate the same logical records between sandbox and production when platform record IDs change between environments?",
+    "gold_ticket_ids": [
+      "tckt-0543"
+    ],
+    "gold_rationale": "The ticket explains why native record IDs cannot provide cross-environment identity and recommends a consistently populated external identifier.",
+    "query_type": "recommended_workaround"
+  },
+  {
+    "query_id": "Q-EN-05",
+    "language": "en",
+    "query": "What caused the scheduling integration to exhaust the login rate limit during busy periods, and what change stopped the failures?",
+    "gold_ticket_ids": [
+      "tckt-0677"
+    ],
+    "gold_rationale": "The ticket identifies per-call authentication without session caching as the cause and documents token reuse as the verified fix.",
+    "query_type": "root_cause_and_resolution"
+  },
+  {
+    "query_id": "Q-EN-06",
+    "language": "en",
+    "query": "We found active customer records in the recycle bin but could not identify who deleted them. What containment is in place, and is the incident fully resolved?",
+    "gold_ticket_ids": [
+      "tckt-0124"
+    ],
+    "gold_rationale": "The ticket covers unexplained deletions, immediate permission containment, the lack of a verified cause, and the remaining monitoring work.",
+    "query_type": "incident_status_and_containment"
+  },
+  {
+    "query_id": "Q-EN-07",
+    "language": "en",
+    "query": "Why could a small group of records be saved successfully but not opened on the detail page, and how was access restored?",
+    "gold_ticket_ids": [
+      "tckt-0986"
+    ],
+    "gold_rationale": "The ticket describes a render-time formula division error in the highlighted panel and the conditional placeholder workaround.",
+    "query_type": "symptom_cause_and_workaround"
+  },
+  {
+    "query_id": "Q-EN-08",
+    "language": "en",
+    "query": "Agents cannot see documents on migrated Cases even though the migration reports successful uploads. Why are the files visible only to the loader, and how was this repaired?",
+    "gold_ticket_ids": [
+      "tckt-0258"
+    ],
+    "gold_rationale": "The ticket identifies missing parent-record share links and documents both the corrected migration step and the one-time repair job.",
+    "query_type": "root_cause_and_resolution"
+  },
+  {
+    "query_id": "Q-EN-09",
+    "language": "en",
+    "query": "Cases created from one customer's desktop emails have an empty description even though the messages contain text. Do we know where the body is lost?",
+    "gold_ticket_ids": [
+      "tckt-0414"
+    ],
+    "gold_rationale": "The ticket describes customer-specific body extraction failures and explicitly states that the loss point and resolution remain unknown.",
+    "query_type": "unresolved_status"
+  },
+  {
+    "query_id": "Q-EN-10",
+    "language": "en",
+    "query": "When an employee forwards a customer's message to support, why is the employee assigned as the Case contact, and what process should agents use for now?",
+    "gold_ticket_ids": [
+      "tckt-0808"
+    ],
+    "gold_rationale": "The ticket explains immediate-sender attribution, the difficulty of parsing forwarded headers, and the manual identification workaround.",
+    "query_type": "cause_and_workaround"
+  },
+  {
+    "query_id": "Q-EN-11",
+    "language": "en",
+    "query": "Finance rejected some invoices because two totals differed by one cent. What caused the discrepancy, and which rounding convention fixed it?",
+    "gold_ticket_ids": [
+      "tckt-0530"
+    ],
+    "gold_rationale": "The ticket compares line-level rounding with end-of-sum rounding and records the unified finance-aligned convention.",
+    "query_type": "root_cause_and_resolution"
+  },
+  {
+    "query_id": "Q-EN-12",
+    "language": "en",
+    "query": "Why do customer quote prices display incorrectly in locales that use a comma as the decimal separator, and how complete is the fix?",
+    "gold_ticket_ids": [
+      "tckt-0570"
+    ],
+    "gold_rationale": "The ticket traces the issue to pilot-era hardcoded formatting and notes that locale-based formatting currently covers only part of the supported locales.",
+    "query_type": "cause_and_partial_resolution"
+  },
+  {
+    "query_id": "Q-EN-13",
+    "language": "en",
+    "query": "Two record-triggered automations overwrite the same account tier field unpredictably. What interim control was applied, and what work remains?",
+    "gold_ticket_ids": [
+      "tckt-0668"
+    ],
+    "gold_rationale": "The ticket describes nondeterministic execution between two flows, explicit priority as an interim measure, and the pending logic merge.",
+    "query_type": "interim_resolution_and_remaining_work"
+  },
+  {
+    "query_id": "Q-EN-14",
+    "language": "en",
+    "query": "Was an emergency administrator account left enabled after an outage, and what safeguard now prevents it from remaining active unnoticed?",
+    "gold_ticket_ids": [
+      "tckt-0789"
+    ],
+    "gold_rationale": "The ticket documents the break-glass account remaining active after the incident and the new one-hour security alert.",
+    "query_type": "security_incident_and_resolution"
+  },
+  {
+    "query_id": "Q-EN-15",
+    "language": "en",
+    "query": "How could two users with the same currency setting see different converted totals on the same dashboard, and has the underlying problem been proven?",
+    "gold_ticket_ids": [
+      "tckt-0798"
+    ],
+    "gold_rationale": "The ticket records divergent exchange-rate results, a suspected caching interaction, an interim scheduling adjustment, and the absence of a fully verified diagnosis.",
+    "query_type": "suspected_cause_and_partial_mitigation"
+  },
+  {
+    "query_id": "Q-EN-16",
+    "language": "en",
+    "query": "Auditors need to search old interactions by product and resolution code, but the archive rejects those filters. What option is available without rebuilding the archive index?",
+    "gold_ticket_ids": [
+      "tckt-0103"
+    ],
+    "gold_rationale": "The ticket explains the fixed big-object index limitation and the nightly warehouse extract workaround.",
+    "query_type": "constraint_and_workaround"
+  },
+  {
+    "query_id": "Q-HE-01",
+    "language": "he",
+    "query": "העוזר מחזיר נתונים מאובייקט סטנדרטי במקום מהאובייקט המותאם בעל השם הדומה. מה גרם לבלבול ואיך תיקנו אותו?",
+    "gold_ticket_ids": [
+      "tckt-0850"
+    ],
+    "gold_rationale": "הטיקט מתאר בחירה שגויה עקב משקל גבוה לדמיון בשם ואת התיקון שנותן משקל רב יותר למונחים ייחודיים לתחום.",
+    "query_type": "root_cause_and_resolution"
+  },
+  {
+    "query_id": "Q-HE-02",
+    "language": "he",
+    "query": "למה הזמנות נדחות במערכת ה־ERP בגלל יחידות מידה לא מוכרות, ומה השתנה בתהליך הסנכרון?",
+    "gold_ticket_ids": [
+      "tckt-0381"
+    ],
+    "gold_rationale": "הטיקט מתאר תחזוקה ידנית שגרמה לפער ביחידות המידה והעברתן לסנכרון לילי כשה־ERP הוא המקור.",
+    "query_type": "root_cause_and_partial_resolution"
+  },
+  {
+    "query_id": "Q-HE-03",
+    "language": "he",
+    "query": "האם אפשר לבצע ניתוח מפורט על כל אחת־עשרה שנות היסטוריית השירות לאחר המיגרציה, ומה זמין לגבי השנים הישנות?",
+    "gold_ticket_ids": [
+      "tckt-0261"
+    ],
+    "gold_rationale": "הטיקט מבחין בין שלוש שנים שמועברות בפירוט מלא לבין שנים ישנות עם שדות ליבה וסיכומים חודשיים בלבד.",
+    "query_type": "scope_and_partial_resolution"
+  },
+  {
+    "query_id": "Q-HE-04",
+    "language": "he",
+    "query": "מקרים שמגיעים מתיבת דואר משותפת של לקוח נוצרים ללא איש קשר ולכן בדיקות הזכאות נכשלות. מה הפתרון הזמני ומה המגבלה שלו?",
+    "gold_ticket_ids": [
+      "tckt-0213"
+    ],
+    "gold_rationale": "הטיקט מתאר יצירת איש קשר מייצג לכל תיבה משותפת ואת אובדן הזיהוי ברמת האדם כתוצאה מהפתרון.",
+    "query_type": "problem_and_workaround_limit"
+  },
+  {
+    "query_id": "Q-HE-05",
+    "language": "he",
+    "query": "איך מתבצעת בדיקת הסנקציות השנייה בלי לחרוג ממגבלת ה־callouts בתהליך הקליטה, ואיזה סיכון נשאר?",
+    "gold_ticket_ids": [
+      "tckt-0472"
+    ],
+    "gold_rationale": "הטיקט מתאר העברת הבדיקה ל־batch מתוזמן ואת חלון הזמן שבו הקליטה נראית שלמה לפני סיום הבדיקה.",
+    "query_type": "workaround_and_residual_risk"
+  },
+  {
+    "query_id": "Q-HE-06",
+    "language": "he",
+    "query": "למה הנתונים בדשבורד ההנהלה מפגרים בכמה שעות אחרי הדוחות התפעוליים, ואיך שיפרו את השקיפות והביצועים?",
+    "gold_ticket_ids": [
+      "tckt-0102"
+    ],
+    "gold_rationale": "הטיקט מקשר את הפיגור לתור של עבודות רענון ומתאר אובייקט סיכום שעתי יחד עם הצגת זמן ה־snapshot.",
+    "query_type": "root_cause_and_workaround"
+  }
+]

@@ -1,0 +1,50 @@
+{
+  "contract_version": "2.0",
+  "experiment_version": "embedding_selection_v2",
+  "protocol_version": "balanced_train_retrieval_en_primary_v1",
+  "sample": {
+    "group_fields": ["family", "solution_type"],
+    "documents_per_group": 2,
+    "expected_groups": 40,
+    "expected_documents": 80
+  },
+  "query_counts": {
+    "en": 16,
+    "he": 6,
+    "total": 22
+  },
+  "ranking_top_k": 10,
+  "selection_order": [
+    "en.hit_at_5",
+    "en.mrr",
+    "en.hit_at_3",
+    "en.hit_at_1",
+    "he.hit_at_5",
+    "he.mrr",
+    "he.hit_at_3",
+    "he.hit_at_1"
+  ],
+  "models": {
+    "bge_base_en_v1_5": {
+      "model_name": "BAAI/bge-base-en-v1.5",
+      "query_prefix": "Represent this sentence for searching relevant passages: ",
+      "document_prefix": "",
+      "role": "English retrieval baseline",
+      "trust_remote_code": false
+    },
+    "nomic_embed_text_v1_5": {
+      "model_name": "nomic-ai/nomic-embed-text-v1.5",
+      "query_prefix": "search_query: ",
+      "document_prefix": "search_document: ",
+      "role": "English long-context candidate",
+      "trust_remote_code": true
+    },
+    "multilingual_e5_base": {
+      "model_name": "intfloat/multilingual-e5-base",
+      "query_prefix": "query: ",
+      "document_prefix": "passage: ",
+      "role": "English candidate with Hebrew-to-English robustness",
+      "trust_remote_code": false
+    }
+  }
+}

@@ -32,6 +32,7 @@ BASE_CONFIG = {
     "stratification_columns": ["family", "solution_type"],
     "default_chunking_strategy": "one_ticket_one_document",
     "rag_doc_version": "rag_documents_v1",
+    "embedding_selection_version": "embedding_selection_v2",
 }
 
 
