@@ -1,0 +1,20 @@
+{
+  "contract_version": "2.0",
+  "manifest_schema": "vector_store_manifest_v2",
+  "vector_store_version": "faiss_e5_base_v1",
+  "selected_model_key": "multilingual_e5_base",
+  "model_name": "intfloat/multilingual-e5-base",
+  "document_prefix": "passage: ",
+  "query_prefix": "query: ",
+  "embedding_dimension": 768,
+  "embedding_dtype": "float32",
+  "normalized": true,
+  "index_type": "IndexFlatIP",
+  "similarity": "cosine_via_normalized_inner_product",
+  "expected_document_count": 1000,
+  "expected_split_counts": {
+    "train": 750,
+    "validation": 150,
+    "test": 100
+  }
+}
