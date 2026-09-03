@@ -83,18 +83,30 @@ class BGEReranker:
         self.model = AutoModelForSequenceClassification.from_pretrained(self.model_id, dtype=dtype)
         self.model.to(self.device).eval()
 
-    def search(self, query: str, candidates: list[dict[str, Any]], top_k: int):
-        import torch
-        if any(
-            not isinstance(item.get("search"), dict)
-            or not item["search"].get("embedding_text")
-            for item in candidates
+    @staticmethod
+    def candidate_text(candidate: dict[str, Any]) -> str:
+        """Rebuild the approved search text from the public retrieval schema."""
+        content = candidate.get("content")
+        required = ("summary", "component", "description")
+        if not isinstance(content, dict) or any(
+            not isinstance(content.get(field), str) or not content[field].strip()
+            for field in required
         ):
             raise RuntimeError(
-                "Reranker candidates must contain search.embedding_text"
+                "Reranker candidates require content.summary, "
+                "content.component and content.description"
             )
+        return (
+            f"Summary: {content['summary']}\n"
+            f"Component: {content['component']}\n"
+            f"Description: {content['description']}"
+        )
+
+    def search(self, query: str, candidates: list[dict[str, Any]], top_k: int):
+        import torch
+        candidate_texts = [self.candidate_text(item) for item in candidates]
         self.load()
-        pairs = [(query, item["search"]["embedding_text"]) for item in candidates]
+        pairs = list(zip([query] * len(candidates), candidate_texts))
         scores = []
         for start in range(0, len(pairs), self.batch_size):
             encoded = self.tokenizer(
