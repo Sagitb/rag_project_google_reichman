@@ -386,6 +386,21 @@ class GroundedGenerator:
             },
         }
 
+    def release_model(self) -> None:
+        """Release generator memory before another large model is loaded."""
+        import gc
+
+        self._processor = None
+        self._model = None
+        gc.collect()
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except ImportError:
+            pass
+
 
 def validate_grounded_result(
     result: dict[str, Any],

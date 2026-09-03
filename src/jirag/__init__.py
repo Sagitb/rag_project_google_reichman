@@ -15,6 +15,17 @@ from .generation import (
     validate_citations,
     validate_grounded_result,
 )
+from .evaluation import (
+    BGEReranker,
+    ensure_generated_answers,
+    ensure_retrieval_contexts,
+    evaluate_retrieval,
+    fingerprint,
+    load_evaluation_contract,
+    load_gold_benchmark,
+    score_generation,
+    select_retriever,
+)
 from .paths import build_project_paths, create_artifact_directories
 from .retrieval import RetrievalEngine, load_retrieval_contract, results_to_dataframe
 from .splitting import ensure_dataset_splits
@@ -46,4 +57,13 @@ __all__ = [
     "validate_citations",
     "validate_grounded_result",
     "write_run_metadata",
+    "BGEReranker",
+    "ensure_generated_answers",
+    "ensure_retrieval_contexts",
+    "evaluate_retrieval",
+    "fingerprint",
+    "load_evaluation_contract",
+    "load_gold_benchmark",
+    "score_generation",
+    "select_retriever",
 ]

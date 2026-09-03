@@ -1,0 +1,902 @@
+{
+  "schema_version": "gold_queries_v1",
+  "benchmark_version": "rag_eval_v1",
+  "records": [
+    {
+      "query_id": "val-single-001",
+      "evaluation_split": "validation",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "Why were some migrated contract amounts inflated by a factor of one hundred, and what controls were introduced to correct and prevent the problem?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0155"
+      ],
+      "expected_solution_types": [
+        "solution-verified"
+      ],
+      "expected_answer_points": [
+        "Comma decimal separators were interpreted as thousands separators by a loader that assumed periods.",
+        "The export was changed to an invariant numeric format and the loader now validates the separator before parsing.",
+        "A batch checksum compares loaded totals with source totals.",
+        "All 2,300 affected contracts were corrected and later batches passed validation."
+      ]
+    },
+    {
+      "query_id": "val-single-002",
+      "evaluation_split": "validation",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "Why did requests for productivity figures by employee and month return one overall total, and how was the grouping logic corrected?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0347"
+      ],
+      "expected_solution_types": [
+        "solution-verified"
+      ],
+      "expected_answer_points": [
+        "The intent classifier recognized aggregation but dropped one of the requested grouping dimensions.",
+        "Most two-dimension questions were therefore aggregated without the requested breakdown.",
+        "Dimension extraction now collects every grouping term and the generated query groups by all of them.",
+        "The answer now lists the dimensions used, and all 25 regression questions matched manual queries."
+      ]
+    },
+    {
+      "query_id": "val-single-003",
+      "evaluation_split": "validation",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "Why did a partner continue encountering a bug that had already been fixed in a newer API version, and how was the notification process changed?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0537"
+      ],
+      "expected_solution_types": [
+        "solution-verified"
+      ],
+      "expected_answer_points": [
+        "The partner had pinned an older API version and its technical contact was not subscribed to the general support mailing list.",
+        "The integration remained on the affected version for eleven months after the fix was released.",
+        "Partner-specific version tracking now identifies relevant fixes for pinned versions and contacts the registered technical owner directly.",
+        "The partner upgraded within two weeks and confirmed that the bug no longer occurred."
+      ]
+    },
+    {
+      "query_id": "val-single-004",
+      "evaluation_split": "validation",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "What caused chat and email correspondence to appear out of chronological order, and how was the timeline repaired?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0608"
+      ],
+      "expected_solution_types": [
+        "solution-verified"
+      ],
+      "expected_answer_points": [
+        "The chat bridge stored local-time timestamps while the mail platform stored UTC timestamps.",
+        "The thread sorted the unnormalized values, producing an ordering error equal to the time-zone offset.",
+        "Chat timestamps are now converted to UTC before storage.",
+        "Affected open cases were recalculated and new test messages appeared in the correct order."
+      ]
+    },
+    {
+      "query_id": "val-single-005",
+      "evaluation_split": "validation",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "How complete is usage-based billing data across the product portfolio, what has been automated, and what limitation remains?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0130"
+      ],
+      "expected_solution_types": [
+        "solution-partial"
+      ],
+      "expected_answer_points": [
+        "Two newer products provide daily metering events with contract-level attribution and are loaded automatically.",
+        "Three legacy products still provide only manually supplied monthly totals without customer-contract detail.",
+        "Forecasting for the legacy products remains an estimate until metering is added to their platform.",
+        "The automated products reconciled within 0.5 percent, while legacy products could be checked only at monthly-total level."
+      ]
+    },
+    {
+      "query_id": "val-single-006",
+      "evaluation_split": "validation",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "What portion of the migrated account data has been fully cleaned, what improvements were made to the remaining accounts, and what is still unresolved?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0461"
+      ],
+      "expected_solution_types": [
+        "solution-partial"
+      ],
+      "expected_answer_points": [
+        "The top 2,000 accounts were manually remediated and meet the complete quality rule set.",
+        "Automated normalization improved address-format compliance across the 40,000-account long tail.",
+        "Missing attributes cannot be reliably filled because the smaller accounts have no knowledgeable owner.",
+        "A total of 12,400 accounts remain flagged for missing data and will migrate with a quality warning."
+      ]
+    },
+    {
+      "query_id": "val-single-007",
+      "evaluation_split": "validation",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "Why can a newly created case remain absent from global search for several minutes, what has been done so far, and has the underlying delay been fixed?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0820"
+      ],
+      "expected_solution_types": [
+        "solution-partial"
+      ],
+      "expected_answer_points": [
+        "Peak record volume increased global-indexing delay to as much as eight minutes, compared with under one minute off peak.",
+        "Agent guidance was updated to explain the expected delay and avoid duplicate assumptions.",
+        "A vendor capacity review was requested.",
+        "The capacity has not yet been increased and the peak-hour delay remains unresolved."
+      ]
+    },
+    {
+      "query_id": "val-single-008",
+      "evaluation_split": "validation",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "Why did a flow sometimes run under an unexpected record owner's context, what interim safeguard was added, and what work remains?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0874"
+      ],
+      "expected_solution_types": [
+        "solution-partial"
+      ],
+      "expected_answer_points": [
+        "An earlier automation could reassign the owner before the affected flow evaluated the owner field.",
+        "The flow therefore sometimes used a different owner from the one present when the transaction began.",
+        "The initial owner is now captured in a separate variable at the start of the transaction.",
+        "The safeguard passed ten tests, but the full automation order-dependency audit remains open."
+      ]
+    },
+    {
+      "query_id": "val-single-009",
+      "evaluation_split": "validation",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "How was an obsolete record type prevented from being used for new records while preserving access to historical records, and why is this not a permanent retirement?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0521"
+      ],
+      "expected_solution_types": [
+        "solution-workaround"
+      ],
+      "expected_answer_points": [
+        "The record type could not be deactivated because about 40,000 historical records still depended on it for rendering.",
+        "It remains active but was removed from every profile's assignable record-type list.",
+        "New records can no longer use it while historical records continue to display correctly.",
+        "It is only a workaround because the record type remains active in metadata and administrative views."
+      ]
+    },
+    {
+      "query_id": "val-single-010",
+      "evaluation_split": "validation",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "How was the unavailable cumulative area chart approximated, and what limitation does the replacement retain?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0603"
+      ],
+      "expected_solution_types": [
+        "solution-workaround"
+      ],
+      "expected_answer_points": [
+        "The reporting library does not support a stacked area chart for the required cumulative time-series shape.",
+        "A stacked bar chart using weekly buckets was adopted instead.",
+        "Operations accepted it as sufficiently clear for weekly review.",
+        "It remains a workaround because it is visually coarser and would need replacement if a native area chart becomes available."
+      ]
+    },
+    {
+      "query_id": "val-single-011",
+      "evaluation_split": "validation",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "Why did a flow select a different first record on repeated runs against unchanged data, and how was the result stabilized?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0770"
+      ],
+      "expected_solution_types": [
+        "solution-workaround"
+      ],
+      "expected_answer_points": [
+        "The get-records element had no explicit sort order, so the platform did not guarantee a stable result order.",
+        "Downstream logic incorrectly assumed that the first returned record was deterministic.",
+        "An explicit creation-date sort now defines which record is first.",
+        "Ten repeated runs selected the same record, although the change is classified as a workaround for the original assumption."
+      ]
+    },
+    {
+      "query_id": "val-single-012",
+      "evaluation_split": "validation",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "Why did a follow-up question lose the custom fiscal period from the preceding request, and how does the assistant handle the ambiguity now?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0950"
+      ],
+      "expected_solution_types": [
+        "solution-workaround"
+      ],
+      "expected_answer_points": [
+        "Conversation context carried object and filter choices but did not preserve the type of date period.",
+        "The follow-up therefore silently defaulted to calendar periods.",
+        "The assistant now asks the user to confirm the period type whenever a follow-up is ambiguous.",
+        "This is a workaround because extending the conversation-state model to retain period type has not been scheduled."
+      ]
+    },
+    {
+      "query_id": "val-single-013",
+      "evaluation_split": "validation",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "What is currently known about allowance calculations that fail only after mobile saves, and what investigation is planned next?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0274"
+      ],
+      "expected_solution_types": [
+        "solution-unresolved"
+      ],
+      "expected_answer_points": [
+        "Mobile saves intermittently complete without an allowance, while the same records calculate correctly when re-saved in a browser.",
+        "Failures cluster in poor-connectivity areas, suggesting an interrupted or partial save, but the mechanism is unconfirmed.",
+        "No flow or mobile configuration change has been made because no root cause has been identified.",
+        "The next step is to add device and session markers and compare affected saves with connectivity logs."
+      ]
+    },
+    {
+      "query_id": "val-single-014",
+      "evaluation_split": "validation",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "What happened when synchronized records received another customer's field values, what containment is active, and why is the incident still unresolved?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0283"
+      ],
+      "expected_solution_types": [
+        "solution-unresolved"
+      ],
+      "expected_answer_points": [
+        "Three records kept their correct identifiers but received fields belonging to another record in the same batch.",
+        "The source payloads were correct, indicating that the values were combined after extraction.",
+        "The integration was reduced to one worker and the affected data was corrected, but this containment halved throughput.",
+        "The defect could not be reproduced and no code fix exists; shared worker state and an instrumented soak test are the next focus."
+      ]
+    },
+    {
+      "query_id": "val-single-015",
+      "evaluation_split": "validation",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "What do we know about the intermittent server errors that have no matching platform log entry, and what is the next escalation step?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0444"
+      ],
+      "expected_solution_types": [
+        "solution-unresolved"
+      ],
+      "expected_answer_points": [
+        "The client receives a server error and request identifier, but the identifier is absent from platform logs.",
+        "Response headers resemble a platform response and client logs show the request reached the connection, so a simple proxy block is unlikely.",
+        "The cause remains unknown and no corrective client change has been made beyond retaining identifiers and relying on retries.",
+        "The next step is a vendor case containing twenty identifiers, timestamps, and response headers."
+      ]
+    },
+    {
+      "query_id": "val-single-016",
+      "evaluation_split": "validation",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "Why do a few contract fields revert to their previous values without an audit entry, and how will the next investigation try to capture the cause?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0524"
+      ],
+      "expected_solution_types": [
+        "solution-unresolved"
+      ],
+      "expected_answer_points": [
+        "About four contracts per month revert to the value that existed immediately before a valid update.",
+        "No later user action, scheduled job, flow, integration write, or field-history entry explains the change.",
+        "No writing process or fix has been identified.",
+        "A database-level trigger is planned to capture every write that bypasses the normal audit path."
+      ]
+    },
+    {
+      "query_id": "val-he-001",
+      "evaluation_split": "validation",
+      "query_type": "single_ticket",
+      "language": "he",
+      "paired_query_id": "val-single-001",
+      "question": "מדוע חלק מסכומי החוזים שהועברו למערכת גדלו פי מאה, ואילו בקרות נוספו כדי לתקן את הנתונים ולמנוע הישנות?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0155"
+      ],
+      "expected_solution_types": [
+        "solution-verified"
+      ],
+      "expected_answer_points": [
+        "Comma decimal separators were interpreted as thousands separators by a loader that assumed periods.",
+        "The export was changed to an invariant numeric format and the loader now validates the separator before parsing.",
+        "A batch checksum compares loaded totals with source totals.",
+        "All 2,300 affected contracts were corrected and later batches passed validation."
+      ]
+    },
+    {
+      "query_id": "val-he-002",
+      "evaluation_split": "validation",
+      "query_type": "single_ticket",
+      "language": "he",
+      "paired_query_id": "val-single-005",
+      "question": "עד כמה נתוני החיוב לפי שימוש מלאים בכל סל המוצרים, מה כבר עבר לאוטומציה ומה עדיין מוגבל?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0130"
+      ],
+      "expected_solution_types": [
+        "solution-partial"
+      ],
+      "expected_answer_points": [
+        "Two newer products provide daily metering events with contract-level attribution and are loaded automatically.",
+        "Three legacy products still provide only manually supplied monthly totals without customer-contract detail.",
+        "Forecasting for the legacy products remains an estimate until metering is added to their platform.",
+        "The automated products reconciled within 0.5 percent, while legacy products could be checked only at monthly-total level."
+      ]
+    },
+    {
+      "query_id": "val-he-003",
+      "evaluation_split": "validation",
+      "query_type": "single_ticket",
+      "language": "he",
+      "paired_query_id": "val-single-009",
+      "question": "כיצד מנעו שימוש בסוג רשומה ישן עבור רשומות חדשות בלי לפגוע ברשומות ההיסטוריות, ולמה זה עדיין רק פתרון עוקף?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0521"
+      ],
+      "expected_solution_types": [
+        "solution-workaround"
+      ],
+      "expected_answer_points": [
+        "The record type could not be deactivated because about 40,000 historical records still depended on it for rendering.",
+        "It remains active but was removed from every profile's assignable record-type list.",
+        "New records can no longer use it while historical records continue to display correctly.",
+        "It is only a workaround because the record type remains active in metadata and administrative views."
+      ]
+    },
+    {
+      "query_id": "val-he-004",
+      "evaluation_split": "validation",
+      "query_type": "single_ticket",
+      "language": "he",
+      "paired_query_id": "val-single-013",
+      "question": "מה ידוע כרגע על חישובי קצבה שנכשלים רק בשמירה מהאפליקציה, ומהו שלב הבדיקה הבא?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0274"
+      ],
+      "expected_solution_types": [
+        "solution-unresolved"
+      ],
+      "expected_answer_points": [
+        "Mobile saves intermittently complete without an allowance, while the same records calculate correctly when re-saved in a browser.",
+        "Failures cluster in poor-connectivity areas, suggesting an interrupted or partial save, but the mechanism is unconfirmed.",
+        "No flow or mobile configuration change has been made because no root cause has been identified.",
+        "The next step is to add device and session markers and compare affected saves with connectivity logs."
+      ]
+    },
+    {
+      "query_id": "val-multi-001",
+      "evaluation_split": "validation",
+      "query_type": "multi_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "A security review found both a dormant API-only account with a valid credential and a legacy job that kept authenticating after credential rotation. What containment was applied to each case, and which risks still lack a confirmed resolution?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0787",
+        "tckt-0790"
+      ],
+      "expected_solution_types": [
+        "solution-workaround",
+        "solution-unresolved"
+      ],
+      "expected_answer_points": [
+        "The apparently dormant account had no successful login for over a year, so its credential was rotated and access restricted during a confirmation window.",
+        "Full deactivation of the dormant account is scheduled if no dependency appears, making the current measure precautionary rather than final.",
+        "The legacy job's continued authentication after rotation has no confirmed cause and may involve caching or another undocumented credential.",
+        "The legacy job was disabled and verbose authentication logging is the next diagnostic step."
+      ]
+    },
+    {
+      "query_id": "val-multi-002",
+      "evaluation_split": "validation",
+      "query_type": "multi_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "What common deployment flaw caused two Salesforce flows to fail after moving between environments, and how was each flow corrected and protected against recurrence?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0467",
+        "tckt-0673"
+      ],
+      "expected_solution_types": [
+        "solution-verified",
+        "solution-verified"
+      ],
+      "expected_answer_points": [
+        "Both flows stored environment-specific record IDs that did not resolve correctly after deployment.",
+        "The opportunity flow now resolves its record type by developer name and a deployment check rejects hardcoded identifiers.",
+        "The escalation flow now looks up the queue by developer name and the eighteen missed cases were escalated manually.",
+        "Both fixes were validated outside the original environment, demonstrating portable references."
+      ]
+    },
+    {
+      "query_id": "val-noanswer-001",
+      "evaluation_split": "validation",
+      "query_type": "no_answer",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "Was the customer support portal unavailable because a DNS record pointed to the wrong endpoint, and how was DNS service restored?",
+      "answerability": "no_answer",
+      "gold_ticket_ids": [],
+      "expected_solution_types": [],
+      "expected_answer_points": []
+    },
+    {
+      "query_id": "val-noanswer-002",
+      "evaluation_split": "validation",
+      "query_type": "no_answer",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "Did Salesforce reach its file-storage quota and prevent users from uploading case attachments, and what archiving policy restored capacity?",
+      "answerability": "no_answer",
+      "gold_ticket_ids": [],
+      "expected_solution_types": [],
+      "expected_answer_points": []
+    },
+    {
+      "query_id": "test-single-001",
+      "evaluation_split": "test",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "Why did an AI-generated profitability query select an invalid field, and what safeguards were added before execution?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0031"
+      ],
+      "expected_solution_types": [
+        "solution-verified"
+      ],
+      "expected_answer_points": [
+        "Schema retrieval returned similarly named fields from different objects without object-qualified examples.",
+        "The generated query selected a Policy-only field from Lead and failed with an Invalid field error.",
+        "Schema entries are now object-qualified and a validator rejects fields that are not present on the selected object.",
+        "Regression questions produced valid object-field combinations, although schema validity alone cannot guarantee business meaning."
+      ]
+    },
+    {
+      "query_id": "test-single-002",
+      "evaluation_split": "test",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "Why was historical file-version information missing after migration, and how was it recovered?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0660"
+      ],
+      "expected_solution_types": [
+        "solution-verified"
+      ],
+      "expected_answer_points": [
+        "The source export was configured to extract only each document's latest version.",
+        "Earlier revisions were mistakenly treated as out of scope even though 3,100 documents had audit-relevant history.",
+        "Those documents are being re-extracted from the retained source archive and reloaded with the platform's version-upload capability.",
+        "A 200-document sample matched the source archive in version order and content."
+      ]
+    },
+    {
+      "query_id": "test-single-003",
+      "evaluation_split": "test",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "How did duplicate external identifiers cause two partner records to overwrite each other, and what change now prevents silent corruption?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0879"
+      ],
+      "expected_solution_types": [
+        "solution-verified"
+      ],
+      "expected_answer_points": [
+        "An upstream data-quality defect gave two unrelated source records the same external identifier.",
+        "Because the target field was not unique, both upserts matched one target record and whichever ran last overwrote the other.",
+        "The external-ID field now enforces uniqueness and the partner corrected the duplicate source value.",
+        "A colliding test upsert now fails with a clear error instead of overwriting data."
+      ]
+    },
+    {
+      "query_id": "test-single-004",
+      "evaluation_split": "test",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "Why were field technicians blocked from the mobile application, what access change was introduced, and what security limitation remains?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0043"
+      ],
+      "expected_solution_types": [
+        "solution-partial"
+      ],
+      "expected_answer_points": [
+        "Rotating carrier IP addresses fell outside the profile's static allowed ranges, causing restricted-address login failures.",
+        "IP ranges were removed only from the technician profile and replaced with multi-factor authentication and device activation.",
+        "Other profiles retained their network restrictions and continued rejecting external addresses.",
+        "The improvement is partial because network-based control is absent for technicians and the intended trusted-device session policy is not complete."
+      ]
+    },
+    {
+      "query_id": "test-single-005",
+      "evaluation_split": "test",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "Why did pre-migration deduplication miss many older contacts, what secondary matching rule was added, and which records still require work?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0161"
+      ],
+      "expected_solution_types": [
+        "solution-partial"
+      ],
+      "expected_answer_points": [
+        "The original matching process relied on email, while about 30 percent of legacy contacts had no email address.",
+        "A secondary rule now uses normalized name, account, and phone, with uncertain matches sent for manual review.",
+        "Duplicate pairs after rehearsal fell from 1,600 to 380 without incorrect merges in a 100-match review.",
+        "Contacts lacking both email and phone remain unmatched, and about 900 pairs await a data steward."
+      ]
+    },
+    {
+      "query_id": "test-single-006",
+      "evaluation_split": "test",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "How much of the automation estate now reports failures, and why is error handling still incomplete?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0271"
+      ],
+      "expected_solution_types": [
+        "solution-partial"
+      ],
+      "expected_answer_points": [
+        "Twelve of nineteen flows use a shared error subflow and log deliberate failures within a minute.",
+        "Seven flows can still fail silently.",
+        "Five older flows require restructuring before fault paths can be attached.",
+        "Two managed-package flows cannot be edited and can only be monitored indirectly through their output."
+      ]
+    },
+    {
+      "query_id": "test-single-007",
+      "evaluation_split": "test",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "Why did revenue splits remain below 100 percent after employee departures, how are the cases handled now, and what permanent fix is still needed?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0054"
+      ],
+      "expected_solution_types": [
+        "solution-workaround"
+      ],
+      "expected_answer_points": [
+        "Removing a departing representative left the remaining split percentages unchanged and the offboarding checklist had no redistribution step.",
+        "A scan found 46 opportunities with only 40 to 80 percent allocated.",
+        "A weekly report identifies invalid totals and revenue operations corrects them manually.",
+        "The workaround does not prevent recurrence; automatic redistribution to the new owner remains the intended fix."
+      ]
+    },
+    {
+      "query_id": "test-single-008",
+      "evaluation_split": "test",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "How are integration changes tested without a partner test environment, and what defects can the current approach still miss?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0182"
+      ],
+      "expected_solution_types": [
+        "solution-workaround"
+      ],
+      "expected_answer_points": [
+        "The partner provides no external test instance and policy prevents sandbox access to production.",
+        "A stub service replays recorded production payloads for regression testing.",
+        "The stub reproduced three of four historical payload defects.",
+        "It remains a workaround because recordings become stale and cannot reveal new behavior or fields that were never captured."
+      ]
+    },
+    {
+      "query_id": "test-single-009",
+      "evaluation_split": "test",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "How was monthly reporting across two organizations accelerated, and what parts of the consolidation process remain manual?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0303"
+      ],
+      "expected_solution_types": [
+        "solution-workaround"
+      ],
+      "expected_answer_points": [
+        "The organizations use incompatible product and region values and have no shared customer key.",
+        "A documented mapping sheet and fixed export procedure reduced consolidation from three days to about four hours.",
+        "The process is still manual and only produces a group figure once per month.",
+        "Six judgement-based mappings still depend on the same analyst."
+      ]
+    },
+    {
+      "query_id": "test-single-010",
+      "evaluation_split": "test",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "What is known about reports that partner users briefly saw opportunities from another partner account, and has a permanent fix been confirmed?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0042"
+      ],
+      "expected_solution_types": [
+        "solution-unresolved"
+      ],
+      "expected_answer_points": [
+        "Two users reported transient cross-account opportunity rows that disappeared after reloading the page.",
+        "Sharing configuration matched the documented design and the event could not be reproduced.",
+        "Sessions were revoked, access was restricted, and security and the platform vendor were engaged as containment.",
+        "No verified root cause or permanent fix exists; any recurrence requires immediate session and sharing diagnostics."
+      ]
+    },
+    {
+      "query_id": "test-single-011",
+      "evaluation_split": "test",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "What is currently known about migrated contacts linked to the wrong customer account, and what must happen before correction?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0164"
+      ],
+      "expected_solution_types": [
+        "solution-unresolved"
+      ],
+      "expected_answer_points": [
+        "A sample found contacts linked to sibling accounts within the same corporate group, creating a correspondence risk.",
+        "Affected contacts were excluded from correspondence and reporting while they are reviewed.",
+        "The shared billing-key pattern does not explain the defect and the sampled mapping file matched the intended assignments.",
+        "No cause or corrective load is approved; a full per-record comparison against the source mapping is required first."
+      ]
+    },
+    {
+      "query_id": "test-single-012",
+      "evaluation_split": "test",
+      "query_type": "single_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "What is known about records that combine values from two nearly simultaneous automation updates, and what diagnostic work is planned?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0724"
+      ],
+      "expected_solution_types": [
+        "solution-unresolved"
+      ],
+      "expected_answer_points": [
+        "A few records each month contain a mixture of fields from a batch process and a flow rather than either complete intended state.",
+        "The result suggests interleaving even though normal platform locking should prevent it.",
+        "The mechanism is not visible in current transaction logs and no fix has been applied.",
+        "Detailed transaction logging will be enabled during the end-of-day window to capture a live occurrence."
+      ]
+    },
+    {
+      "query_id": "test-he-001",
+      "evaluation_split": "test",
+      "query_type": "single_ticket",
+      "language": "he",
+      "paired_query_id": "test-single-001",
+      "question": "מדוע שאילתת הרווחיות שיצר ה־AI בחרה שדה שאינו קיים באובייקט, ואילו בדיקות נוספו לפני ההרצה?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0031"
+      ],
+      "expected_solution_types": [
+        "solution-verified"
+      ],
+      "expected_answer_points": [
+        "Schema retrieval returned similarly named fields from different objects without object-qualified examples.",
+        "The generated query selected a Policy-only field from Lead and failed with an Invalid field error.",
+        "Schema entries are now object-qualified and a validator rejects fields that are not present on the selected object.",
+        "Regression questions produced valid object-field combinations, although schema validity alone cannot guarantee business meaning."
+      ]
+    },
+    {
+      "query_id": "test-he-002",
+      "evaluation_split": "test",
+      "query_type": "single_ticket",
+      "language": "he",
+      "paired_query_id": "test-single-004",
+      "question": "מדוע טכנאי שטח נחסמו בכניסה מהטלפון, איזה שינוי גישה בוצע ואיזו מגבלת אבטחה עדיין נשארה?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0043"
+      ],
+      "expected_solution_types": [
+        "solution-partial"
+      ],
+      "expected_answer_points": [
+        "Rotating carrier IP addresses fell outside the profile's static allowed ranges, causing restricted-address login failures.",
+        "IP ranges were removed only from the technician profile and replaced with multi-factor authentication and device activation.",
+        "Other profiles retained their network restrictions and continued rejecting external addresses.",
+        "The improvement is partial because network-based control is absent for technicians and the intended trusted-device session policy is not complete."
+      ]
+    },
+    {
+      "query_id": "test-he-003",
+      "evaluation_split": "test",
+      "query_type": "single_ticket",
+      "language": "he",
+      "paired_query_id": "test-single-007",
+      "question": "מדוע חלוקת ההכנסות נשארה מתחת למאה אחוז לאחר עזיבת עובדים, כיצד מטפלים בכך היום ומהו התיקון הקבוע שעדיין חסר?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0054"
+      ],
+      "expected_solution_types": [
+        "solution-workaround"
+      ],
+      "expected_answer_points": [
+        "Removing a departing representative left the remaining split percentages unchanged and the offboarding checklist had no redistribution step.",
+        "A scan found 46 opportunities with only 40 to 80 percent allocated.",
+        "A weekly report identifies invalid totals and revenue operations corrects them manually.",
+        "The workaround does not prevent recurrence; automatic redistribution to the new owner remains the intended fix."
+      ]
+    },
+    {
+      "query_id": "test-he-004",
+      "evaluation_split": "test",
+      "query_type": "single_ticket",
+      "language": "he",
+      "paired_query_id": "test-single-010",
+      "question": "מה ידוע על הדיווחים שלפיהם משתמשי שותף ראו לרגע הזדמנויות של שותף אחר, והאם נמצא תיקון קבוע?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0042"
+      ],
+      "expected_solution_types": [
+        "solution-unresolved"
+      ],
+      "expected_answer_points": [
+        "Two users reported transient cross-account opportunity rows that disappeared after reloading the page.",
+        "Sharing configuration matched the documented design and the event could not be reproduced.",
+        "Sessions were revoked, access was restricted, and security and the platform vendor were engaged as containment.",
+        "No verified root cause or permanent fix exists; any recurrence requires immediate session and sharing diagnostics."
+      ]
+    },
+    {
+      "query_id": "test-multi-001",
+      "evaluation_split": "test",
+      "query_type": "multi_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "Why were the available trend histories for snapshots and inquiries incomplete, what data was recovered, and which historical limitation remains?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0397",
+        "tckt-0502"
+      ],
+      "expected_solution_types": [
+        "solution-verified",
+        "solution-partial"
+      ],
+      "expected_answer_points": [
+        "The weekly snapshot job stopped when the user who scheduled it was deactivated, leaving eleven weeks with a repeated stale value.",
+        "The job was moved to a service account, nine missing weeks were reconstructed, and freshness monitoring was added.",
+        "Inquiry trend capture began only four months ago because the original snapshot process covered cases alone.",
+        "Earlier inquiry history cannot be reconstructed exactly and is only approximated from creation dates with the limitation disclosed."
+      ]
+    },
+    {
+      "query_id": "test-multi-002",
+      "evaluation_split": "test",
+      "query_type": "multi_ticket",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "How did bulk processing affect two record-triggered flows, and which issue received a permanent fix versus an interim reprocessing measure?",
+      "answerability": "answerable",
+      "gold_ticket_ids": [
+        "tckt-0465",
+        "tckt-0870"
+      ],
+      "expected_solution_types": [
+        "solution-verified",
+        "solution-partial"
+      ],
+      "expected_answer_points": [
+        "One flow queried pricing once per shipment inside a loop and exceeded the 100-query transaction limit on large loads.",
+        "Its lookup was moved outside the loop and a 5,000-record load completed successfully, providing a permanent bulk-safe fix.",
+        "The other flow missed some genuine field changes because of an unconfirmed Bulk API batching behavior.",
+        "Missed records are detected and reprocessed through smaller loads, which works operationally but remains an interim measure."
+      ]
+    },
+    {
+      "query_id": "test-noanswer-001",
+      "evaluation_split": "test",
+      "query_type": "no_answer",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "Were customer payments charged twice because the payment gateway retried timed-out transactions, and how were the duplicate charges reversed?",
+      "answerability": "no_answer",
+      "gold_ticket_ids": [],
+      "expected_solution_types": [],
+      "expected_answer_points": []
+    },
+    {
+      "query_id": "test-noanswer-002",
+      "evaluation_split": "test",
+      "query_type": "no_answer",
+      "language": "en",
+      "paired_query_id": null,
+      "question": "Were encrypted backups rendered unusable after the recovery key was lost, and how was disaster recovery restored?",
+      "answerability": "no_answer",
+      "gold_ticket_ids": [],
+      "expected_solution_types": [],
+      "expected_answer_points": []
+    }
+  ]
+}
