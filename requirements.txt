@@ -4,6 +4,7 @@ pandas>=2.2,<3
 scikit-learn>=1.5,<2
 matplotlib>=3.8,<4
 seaborn>=0.13,<1
+ipython>=7.34,<10
 psutil>=5.9,<8
 sentence-transformers>=3.0,<6
 faiss-cpu>=1.8,<2
