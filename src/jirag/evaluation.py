@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import time
 from pathlib import Path
 from typing import Any, Callable
 
@@ -134,33 +133,45 @@ class BGEReranker:
             pass
 
 
-def evaluate_retrieval(records, searchers: dict[str, Callable], output_k: int = 5):
-    """Compare retrievers on answerable Gold queries; no-answer belongs to generation."""
+def evaluate_retrieval_contexts(records, contexts_by_system, output_k: int = 5):
+    """Calculate retrieval metrics from persisted contexts without running models."""
+    record_by_id = {record["query_id"]: record for record in records}
     rows = []
-    for system, search in searchers.items():
-        for record in records:
+    for system, contexts in contexts_by_system.items():
+        if {row["query_id"] for row in contexts} != set(record_by_id):
+            raise RuntimeError(f"{system}: retrieval contexts do not match the benchmark")
+        for context in contexts:
+            record = record_by_id[context["query_id"]]
             if record["answerability"] != "answerable":
                 continue
-            started = time.perf_counter(); results = search(record["question"])
-            ids = [item["document_id"] for item in results[:output_k]]
-            ranks = {ticket_id: (ids.index(ticket_id) + 1 if ticket_id in ids else None) for ticket_id in record["gold_ticket_ids"]}
+            results = context["retrieval_results"][:output_k]
+            ids = [item["document_id"] for item in results]
+            ranks = {
+                ticket_id: ids.index(ticket_id) + 1 if ticket_id in ids else None
+                for ticket_id in record["gold_ticket_ids"]
+            }
             found = [rank for rank in ranks.values() if rank is not None]
             rows.append({
-                "system": system, "query_id": record["query_id"], "language": record["language"],
-                "query_type": record["query_type"], "gold_ticket_ids": record["gold_ticket_ids"],
+                "system": system, "query_id": record["query_id"],
+                "language": record["language"], "query_type": record["query_type"],
+                "gold_ticket_ids": record["gold_ticket_ids"],
                 "retrieved_ticket_ids": ids, "gold_ranks": ranks,
                 "hit_at_1": float(bool(found) and min(found) <= 1),
-                "hit_at_5": float(bool(found)), "recall_at_5": len(found) / len(ranks),
+                "hit_at_5": float(bool(found)),
+                "recall_at_5": len(found) / len(ranks),
                 "complete_at_5": float(len(found) == len(ranks)),
                 "reciprocal_rank_at_5": 0.0 if not found else 1.0 / min(found),
-                "latency_seconds": time.perf_counter() - started,
             })
     metrics = {}
-    for system in searchers:
-        subset = [r for r in rows if r["system"] == system]
-        metrics[system] = {key: float(np.mean([r[key] for r in subset])) for key in (
-            "hit_at_1", "hit_at_5", "recall_at_5", "complete_at_5", "reciprocal_rank_at_5", "latency_seconds"
-        )}
+    for system in contexts_by_system:
+        subset = [row for row in rows if row["system"] == system]
+        metrics[system] = {
+            key: float(np.mean([row[key] for row in subset]))
+            for key in (
+                "hit_at_1", "hit_at_5", "recall_at_5",
+                "complete_at_5", "reciprocal_rank_at_5",
+            )
+        }
         metrics[system]["query_count"] = len(subset)
     return rows, metrics
 
@@ -214,7 +225,8 @@ def score_generation(
         rows.append({
             "query_id": record["query_id"], "answerability": record["answerability"], "language": record["language"],
             "answer": answer, "retrieved_ticket_ids": result["retrieved_ticket_ids"], "cited_ticket_ids": cited,
-            "citation_presence": float(bool(cited)), "all_citations_from_context": float(bool(cited) and set(cited) <= retrieved),
+            "citation_presence": float(bool(cited)),
+            "all_citations_from_context": float(set(cited) <= retrieved),
             "gold_citation_recall": None if not gold else len(valid & gold) / len(gold),
             "gold_citation_precision": None if not cited else len(valid & gold) / len(cited),
             "point_scores": point_scores, "point_coverage": None if not point_scores else float(np.mean(np.array(point_scores) >= threshold)),
@@ -245,7 +257,10 @@ def load_jsonl(path: Path):
     return [json.loads(line) for line in Path(path).read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-def ensure_retrieval_contexts(path: Path, records, search: Callable, identity: dict[str, Any]):
+def ensure_retrieval_contexts(
+    path: Path, records, search: Callable, identity: dict[str, Any],
+    label: str = "Retrieval",
+):
     """LOAD matching retrieved contexts or BUILD them once for later generation."""
     path = Path(path); manifest_path = path.with_suffix(".manifest.json")
     expected = fingerprint(identity)
@@ -253,11 +268,14 @@ def ensure_retrieval_contexts(path: Path, records, search: Callable, identity: d
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         rows = load_jsonl(path)
         if manifest.get("identity") == expected and len(rows) == len(records):
+            print(f"[LOAD] {label}: {len(rows)}/{len(records)} contexts")
             return rows, "LOAD"
+    print(f"[BUILD] {label}: creating {len(records)} contexts")
     rows = []
-    for record in records:
+    for position, record in enumerate(records, start=1):
         results = search(record["question"])
         rows.append({"query_id": record["query_id"], "retrieval_results": results})
+        print(f"[BUILD] {label}: {position}/{len(records)} saved")
     write_jsonl(path, rows)
     write_json_atomic({"identity": expected, "row_count": len(rows)}, manifest_path)
     return rows, "BUILD"
@@ -271,17 +289,28 @@ def ensure_generated_answers(
     message_builder,
     prompt_version: str,
     identity: dict[str, Any],
+    label: str = "Generation",
 ):
     """Resume deterministic generation query by query and reuse a completed artifact."""
     path = Path(path); manifest_path = path.with_suffix(".manifest.json")
+    progress_path = path.with_suffix(".progress.json")
     expected = fingerprint(identity); record_by_id = {r["query_id"]: r for r in records}
     completed = {}
-    if path.is_file():
-        completed = {r["query_id"]: r for r in load_jsonl(path)}
-    if manifest_path.is_file() and len(completed) == len(records):
+    if path.is_file() and manifest_path.is_file():
+        saved_rows = load_jsonl(path)
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        if manifest.get("identity") == expected:
-            return [completed[r["query_id"]] for r in records], "LOAD"
+        if manifest.get("identity") == expected and len(saved_rows) == len(records):
+            print(f"[LOAD] {label}: {len(saved_rows)}/{len(records)} answers")
+            return saved_rows, "LOAD"
+    progress_matches = False
+    if progress_path.is_file():
+        progress = json.loads(progress_path.read_text(encoding="utf-8"))
+        progress_matches = progress.get("identity") == expected
+    if path.is_file() and progress_matches:
+        completed = {r["query_id"]: r for r in load_jsonl(path)}
+    write_json_atomic({"identity": expected}, progress_path)
+    action = "RESUME" if completed else "BUILD"
+    print(f"[{action}] {label}: {len(completed)}/{len(records)} answers already saved")
     for context in contexts:
         query_id = context["query_id"]
         if query_id in completed:
@@ -292,6 +321,7 @@ def ensure_generated_answers(
         )
         result["query_id"] = query_id; completed[query_id] = result
         write_jsonl(path, [completed[r["query_id"]] for r in records if r["query_id"] in completed])
+        print(f"[BUILD] {label}: {len(completed)}/{len(records)} saved")
     ordered = [completed[r["query_id"]] for r in records]
     write_json_atomic({"identity": expected, "row_count": len(ordered)}, manifest_path)
-    return ordered, "BUILD"
+    return ordered, action
