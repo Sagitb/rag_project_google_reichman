@@ -1,0 +1,28 @@
+{
+  "schema_version": "generation_contract_v1",
+  "artifact_version": "baseline_rag_demo_v1",
+  "model_id": "google/gemma-4-E4B-it",
+  "prompt_version": "basic_grounded_rag_v2_no_gold_labels",
+  "prompt_file": "prompts/basic_grounded_rag_v2_no_gold_labels.txt",
+  "default_top_k": 3,
+  "max_input_tokens": 12000,
+  "max_new_tokens": 320,
+  "do_sample": false,
+  "require_cuda": true,
+  "context_fields": [
+    "ticket_id",
+    "summary",
+    "component",
+    "work_type",
+    "status",
+    "priority",
+    "description"
+  ],
+  "excluded_context_fields": [
+    "family",
+    "solution_type",
+    "split",
+    "retrieval_score",
+    "source_rank"
+  ]
+}

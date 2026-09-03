@@ -25,6 +25,7 @@ def build_project_paths(repo_root: Path, artifact_root: Path) -> dict[str, Path]
         "checkpoints": artifact_root / "checkpoints",
         "reports_qa": artifact_root / "reports" / "data_qa",
         "reports_eval": artifact_root / "reports" / "evaluation",
+        "reports_generation": artifact_root / "reports" / "generation",
         "reports_figs": artifact_root / "reports" / "figures",
         "logs": artifact_root / "logs",
         "exports": artifact_root / "exports",
