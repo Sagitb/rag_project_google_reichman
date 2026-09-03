@@ -5,6 +5,7 @@ from .config import BASE_CONFIG, set_global_seed
 from .data_pipeline import ensure_validated_dataset, load_dataset_contract
 from .eda import ensure_eda_artifacts
 from .paths import build_project_paths, create_artifact_directories
+from .splitting import ensure_dataset_splits
 
 __all__ = [
     "BASE_CONFIG",
@@ -13,6 +14,7 @@ __all__ = [
     "create_artifact_directories",
     "ensure_validated_dataset",
     "ensure_eda_artifacts",
+    "ensure_dataset_splits",
     "load_dataset_contract",
     "save_config_snapshot",
     "set_global_seed",
