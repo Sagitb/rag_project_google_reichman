@@ -1,45 +1,40 @@
-## Quick Start
+# jiRAG
 
-The project is designed to run in Google Colab using the main `jiRAG.ipynb` notebook.
+jiRAG is a Retrieval-Augmented Generation system built over an approved dataset of 1,000 anonymized Jira tickets. The project combines semantic ticket retrieval, a persistent vector store, grounded answer generation and ticket-level citations.
 
-### First run
+## Running the project
 
-1. Open `jiRAG.ipynb` in Google Colab.
-
-2. Select **Runtime → Run all**.
-
-3. Authorize Google Drive when prompted.
-
-4. If the raw dataset is not already available, the notebook will request the following file:
-
-   ```text
-   jira_rag_master_FINAL_1000.csv
-   ```
-
-   The file is included in this repository under:
-
-   ```text
-   data/raw/jira_rag_master_FINAL_1000.csv
-   ```
-
-5. Upload that exact file when the upload widget appears.
-
-The notebook saves the raw dataset persistently to:
+The main entry point is:
 
 ```text
-MyDrive/jiRAG/data/raw/jira_rag_master_FINAL_1000.csv
+jiRAG.ipynb
 ```
 
-It then automatically creates and validates all derived artifacts, including:
+Open the notebook in Google Colab and execute its sections in order.
 
-* the normalized dataset;
-* QA and EDA reports;
-* Train, Validation and Test splits;
-* manifests and fingerprints;
-* RAG document JSONL files.
+On the first run, Section 0:
 
-### Subsequent runs
+1. Mounts Google Drive.
+2. Clones the complete GitHub repository.
+3. Loads the source code, requirements and approved raw dataset from the repository.
+4. Creates a separate Drive directory for generated artifacts.
+5. Validates the environment before data processing begins.
 
-If the raw dataset and generated artifacts already exist in Google Drive, the notebook reuses and validates them. The upload widget will not appear again unless the raw dataset is missing.
+On later runs, the notebook updates the existing repository clone using Git and reuses compatible artifacts when possible.
 
-Generated datasets, splits, reports, indexes, checkpoints and models are stored in Google Drive and are not committed to Git.
+## Storage structure
+
+The GitHub repository contains the reproducible project sources:
+
+* The main notebook.
+* Python modules under `src/`.
+* Project requirements and configuration.
+* The approved raw dataset under `data/raw/`.
+
+Generated files are not stored in Git. Processed datasets, splits, evaluation files, embeddings, vector indexes, reports and model artifacts are created by the notebook and stored under:
+
+```text
+MyDrive/jiRAG/artifacts/
+```
+
+The only CSV tracked in Git is the approved raw dataset. All derived CSV files are generated during execution.
