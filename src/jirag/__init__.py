@@ -3,6 +3,7 @@
 from .artifacts import calculate_sha256, save_config_snapshot, write_run_metadata
 from .config import BASE_CONFIG, set_global_seed
 from .data_pipeline import ensure_validated_dataset, load_dataset_contract
+from .documents import ensure_rag_documents, load_jsonl
 from .eda import ensure_eda_artifacts
 from .paths import build_project_paths, create_artifact_directories
 from .splitting import ensure_dataset_splits
@@ -15,7 +16,9 @@ __all__ = [
     "ensure_validated_dataset",
     "ensure_eda_artifacts",
     "ensure_dataset_splits",
+    "ensure_rag_documents",
     "load_dataset_contract",
+    "load_jsonl",
     "save_config_snapshot",
     "set_global_seed",
     "write_run_metadata",

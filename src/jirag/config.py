@@ -31,6 +31,7 @@ BASE_CONFIG = {
     "test_ratio": 0.10,
     "stratification_columns": ["family", "solution_type"],
     "default_chunking_strategy": "one_ticket_one_document",
+    "rag_doc_version": "rag_documents_v1",
 }
 
 

@@ -1,0 +1,41 @@
+{
+  "contract_version": "1.0",
+  "document_version": "rag_documents_v1",
+  "top_level_fields": [
+    "document_id",
+    "search",
+    "content",
+    "metadata",
+    "evaluation",
+    "system"
+  ],
+  "search_fields": ["embedding_text"],
+  "content_fields": {
+    "summary": "Summary",
+    "component": "Component",
+    "description": "Description"
+  },
+  "metadata_fields": {
+    "component": "Component",
+    "status": "Status",
+    "priority": "Priority",
+    "work_type": "Work Type"
+  },
+  "evaluation_fields": {
+    "family": "family",
+    "solution_type": "solution_type"
+  },
+  "system_fields": ["split", "document_version"],
+  "embedding_content_fields": ["summary", "component", "description"],
+  "embedding_source_fields": ["Summary", "Component", "Description"],
+  "embedding_template": "Summary: {summary}\nComponent: {component}\nDescription: {description}",
+  "excluded_from_embedding": [
+    "ticket_id",
+    "Status",
+    "Priority",
+    "Work Type",
+    "family",
+    "solution_type",
+    "split"
+  ]
+}
