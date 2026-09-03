@@ -1,0 +1,74 @@
+{
+  "contract_version": "1.2",
+  "dataset_version": "final_1000_v1",
+  "expected_row_count": 1000,
+  "expected_raw_header": [
+    "Summary",
+    "Description",
+    "Work Type",
+    "Priority",
+    "Status",
+    "Component",
+    "Labels",
+    "Labels",
+    "Labels"
+  ],
+  "normalized_columns": [
+    "Summary",
+    "Description",
+    "Work Type",
+    "Priority",
+    "Status",
+    "Component",
+    "ticket_id",
+    "family",
+    "solution_type"
+  ],
+  "label_rename_map": {
+    "Labels": "ticket_id",
+    "Labels.1": "family",
+    "Labels.2": "solution_type"
+  },
+  "allowed_work_types": ["Bug", "Task", "Story"],
+  "allowed_priorities": ["Highest", "High", "Medium", "Low"],
+  "allowed_statuses": ["To Do", "In Progress", "Done"],
+  "expected_families": [
+    "family-ai-to-soql",
+    "family-api-platform",
+    "family-crm-integration",
+    "family-crm-record-management",
+    "family-data-migration",
+    "family-email-activity",
+    "family-revenue-operations",
+    "family-salesforce-flow",
+    "family-salesforce-security",
+    "family-soql-analytics"
+  ],
+  "expected_tickets_per_family": 100,
+  "expected_solution_distribution": {
+    "solution-verified": 550,
+    "solution-partial": 150,
+    "solution-workaround": 150,
+    "solution-unresolved": 150
+  },
+  "allowed_statuses_by_solution": {
+    "solution-verified": ["Done"],
+    "solution-partial": ["In Progress", "Done"],
+    "solution-workaround": ["In Progress", "Done"],
+    "solution-unresolved": ["To Do", "In Progress"]
+  },
+  "description_headings": [
+    "CONTEXT",
+    "ISSUE OR REQUEST",
+    "EXPECTED BEHAVIOR",
+    "ACTUAL BEHAVIOR",
+    "INVESTIGATION AND FINDINGS",
+    "RESOLUTION",
+    "VALIDATION"
+  ],
+  "description_word_count": {
+    "minimum": 90,
+    "maximum": 220
+  },
+  "expected_canonical_sha256": "eab7eb446a05d750fb86b9b6d74646bdb43fec88e1e76c1e00c75146232b9236"
+}
