@@ -239,6 +239,42 @@ def _final_adapter_valid(adapter_dir: Path, manifest_path: Path, expected: str) 
     return manifest.get("identity_fingerprint") == expected
 
 
+def _resolve_lora_targets(model, requested: list[str]) -> list[str]:
+    """Resolve requested projections to PEFT-compatible leaf modules.
+
+    Gemma 4 wraps its quantized projections in ``Gemma4ClippableLinear``.
+    PEFT cannot attach an adapter to that wrapper, but it can attach to its
+    inner bitsandbytes ``linear`` module. Other architectures keep the usual
+    projection names and therefore continue to use the configured targets.
+    """
+    requested = set(requested)
+    module_names = {name for name, _ in model.named_modules()}
+    direct = sorted(
+        name for name in module_names
+        if name.rsplit(".", 1)[-1] in requested
+    )
+    wrapped_all = sorted(
+        f"{name}.linear" for name, module in model.named_modules()
+        if name.rsplit(".", 1)[-1] in requested
+        and module.__class__.__name__ == "Gemma4ClippableLinear"
+        and f"{name}.linear" in module_names
+    )
+    wrapped_language = [
+        name for name in wrapped_all
+        if "language_model" in name or "text_model" in name
+    ]
+    wrapped = wrapped_language or wrapped_all
+    if wrapped:
+        print(f"[INFO] Gemma 4 LoRA targets: {len(wrapped)} inner linear layers")
+        return wrapped
+    if direct:
+        print(f"[INFO] LoRA targets: {', '.join(sorted(requested))}")
+        return sorted(requested)
+    raise RuntimeError(
+        "None of the configured LoRA target projections were found in the base model"
+    )
+
+
 def train_or_load_adapter(
     *, name: str, settings: dict[str, Any], contract: dict[str, Any],
     train_examples, validation_examples, dataset_manifest: dict[str, Any],
@@ -267,11 +303,12 @@ def train_or_load_adapter(
     from peft import LoraConfig, TaskType, get_peft_model
     from transformers import Trainer, TrainingArguments
 
+    resolved_targets = _resolve_lora_targets(model, contract["target_modules"])
     lora = LoraConfig(
         r=settings["rank"],
         lora_alpha=settings["alpha"],
         lora_dropout=contract["lora_dropout"],
-        target_modules=contract["target_modules"],
+        target_modules=resolved_targets,
         bias="none",
         task_type=TaskType.CAUSAL_LM,
     )
