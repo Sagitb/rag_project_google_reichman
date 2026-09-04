@@ -28,6 +28,19 @@ def require_qlora_runtime() -> None:
     ]
     if missing:
         raise RuntimeError(f"Missing QLoRA dependencies: {', '.join(missing)}")
+    from packaging.version import Version
+    minimum = {"transformers": "5.10.1", "peft": "0.19.0"}
+    outdated = [
+        f"{name} {_package_version(name)} < {required}"
+        for name, required in minimum.items()
+        if Version(_package_version(name)) < Version(required)
+    ]
+    if outdated:
+        raise RuntimeError(
+            "Gemma 4 QLoRA runtime is outdated: "
+            + "; ".join(outdated)
+            + ". Run Section 0 dependencies and restart the Colab runtime."
+        )
     import torch
     if not torch.cuda.is_available():
         raise RuntimeError("QLoRA training requires a CUDA GPU")
@@ -68,6 +81,7 @@ def load_quantized_base(model_id: str, *, training: bool):
         bnb_4bit_quant_type="nf4",
         bnb_4bit_use_double_quant=True,
         bnb_4bit_compute_dtype=compute_dtype,
+        bnb_4bit_quant_storage=compute_dtype,
     )
     token = _optional_hf_token()
     processor = AutoProcessor.from_pretrained(model_id, token=token)
@@ -222,7 +236,7 @@ def _experiment_identity(name, settings, contract, dataset_manifest):
                 "learning_rate", "per_device_train_batch_size", "per_device_eval_batch_size",
                 "gradient_accumulation_steps", "logging_steps", "warmup_ratio",
                 "lr_scheduler_type", "weight_decay", "max_grad_norm",
-                "save_total_limit", "lora_dropout", "target_modules",
+                "save_total_limit", "lora_dropout",
             )
         },
         "dataset_identity": dataset_manifest["identity_fingerprint"],
@@ -237,42 +251,6 @@ def _final_adapter_valid(adapter_dir: Path, manifest_path: Path, expected: str) 
     except (OSError, json.JSONDecodeError):
         return False
     return manifest.get("identity_fingerprint") == expected
-
-
-def _resolve_lora_targets(model, requested: list[str]) -> list[str]:
-    """Resolve requested projections to PEFT-compatible leaf modules.
-
-    Gemma 4 wraps its quantized projections in ``Gemma4ClippableLinear``.
-    PEFT cannot attach an adapter to that wrapper, but it can attach to its
-    inner bitsandbytes ``linear`` module. Other architectures keep the usual
-    projection names and therefore continue to use the configured targets.
-    """
-    requested = set(requested)
-    module_names = {name for name, _ in model.named_modules()}
-    direct = sorted(
-        name for name in module_names
-        if name.rsplit(".", 1)[-1] in requested
-    )
-    wrapped_all = sorted(
-        f"{name}.linear" for name, module in model.named_modules()
-        if name.rsplit(".", 1)[-1] in requested
-        and module.__class__.__name__ == "Gemma4ClippableLinear"
-        and f"{name}.linear" in module_names
-    )
-    wrapped_language = [
-        name for name in wrapped_all
-        if "language_model" in name or "text_model" in name
-    ]
-    wrapped = wrapped_language or wrapped_all
-    if wrapped:
-        print(f"[INFO] Gemma 4 LoRA targets: {len(wrapped)} inner linear layers")
-        return wrapped
-    if direct:
-        print(f"[INFO] LoRA targets: {', '.join(sorted(requested))}")
-        return sorted(requested)
-    raise RuntimeError(
-        "None of the configured LoRA target projections were found in the base model"
-    )
 
 
 def train_or_load_adapter(
@@ -303,12 +281,11 @@ def train_or_load_adapter(
     from peft import LoraConfig, TaskType, get_peft_model
     from transformers import Trainer, TrainingArguments
 
-    resolved_targets = _resolve_lora_targets(model, contract["target_modules"])
     lora = LoraConfig(
         r=settings["rank"],
         lora_alpha=settings["alpha"],
         lora_dropout=contract["lora_dropout"],
-        target_modules=resolved_targets,
+        # PEFT >= 0.19 provides Gemma 4 defaults scoped to language layers.
         bias="none",
         task_type=TaskType.CAUSAL_LM,
     )
