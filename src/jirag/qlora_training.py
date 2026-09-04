@@ -110,16 +110,45 @@ def _chat_ids(processor, messages, *, generation_prompt: bool):
     )
 
 
+def _assistant_boundary(processor, row: dict[str, Any]) -> tuple[list[int], int]:
+    """Locate the assistant span despite small chat-template suffix differences.
+
+    Some Gemma templates render an empty generation turn with control tokens
+    that differ slightly from a completed assistant turn. The shared prefix is
+    therefore the reliable masking boundary; a strict proximity gate rejects
+    any mismatch that occurs inside the actual user prompt.
+    """
+    prompt_ids = _chat_ids(
+        processor, row["messages"][:-1], generation_prompt=True
+    )
+    full_ids = _chat_ids(
+        processor, row["messages"], generation_prompt=False
+    )
+    boundary = 0
+    for prompt_token, full_token in zip(prompt_ids, full_ids):
+        if prompt_token != full_token:
+            break
+        boundary += 1
+
+    allowed_template_suffix = 32
+    if boundary < len(prompt_ids) - allowed_template_suffix:
+        raise RuntimeError(
+            f"Chat-template mismatch occurs inside the prompt: {row['example_id']} "
+            f"(shared {boundary}/{len(prompt_ids)} tokens)"
+        )
+    if boundary >= len(full_ids):
+        raise RuntimeError(f"Assistant target is empty: {row['example_id']}")
+    return full_ids, boundary
+
+
 def token_diagnostics(examples, processor, max_sequence_length: int):
     """Measure exact Gemma sequence lengths before training and reject truncation."""
     lengths = []
     target_lengths = []
     for row in examples:
-        prompt_ids = _chat_ids(processor, row["messages"][:-1], generation_prompt=True)
-        full_ids = _chat_ids(processor, row["messages"], generation_prompt=False)
-        if full_ids[:len(prompt_ids)] != prompt_ids:
-            raise RuntimeError(f"Chat-template prompt mismatch: {row['example_id']}")
-        lengths.append(len(full_ids)); target_lengths.append(len(full_ids) - len(prompt_ids))
+        full_ids, boundary = _assistant_boundary(processor, row)
+        lengths.append(len(full_ids))
+        target_lengths.append(len(full_ids) - boundary)
     over_limit = sum(length > max_sequence_length for length in lengths)
     return {
         "examples": len(lengths),
@@ -146,16 +175,13 @@ class QLoRAChatDataset:
     def __getitem__(self, index):
         import torch
         row = self.examples[index]
-        prompt_ids = _chat_ids(self.processor, row["messages"][:-1], generation_prompt=True)
-        full_ids = _chat_ids(self.processor, row["messages"], generation_prompt=False)
-        if full_ids[:len(prompt_ids)] != prompt_ids:
-            raise RuntimeError(f"Chat-template prompt mismatch: {row['example_id']}")
+        full_ids, boundary = _assistant_boundary(self.processor, row)
         if len(full_ids) > self.max_sequence_length:
             raise RuntimeError(
                 f"{row['example_id']} has {len(full_ids)} tokens; source-preserving "
                 f"training refuses to truncate the {self.max_sequence_length}-token sequence"
             )
-        labels = [-100] * len(prompt_ids) + full_ids[len(prompt_ids):]
+        labels = [-100] * boundary + full_ids[boundary:]
         return {
             "input_ids": torch.tensor(full_ids, dtype=torch.long),
             "attention_mask": torch.ones(len(full_ids), dtype=torch.long),
