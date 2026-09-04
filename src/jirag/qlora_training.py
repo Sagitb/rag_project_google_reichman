@@ -115,13 +115,23 @@ def release_model(*objects) -> None:
         pass
 
 
-def _chat_ids(processor, messages, *, generation_prompt: bool):
+def _chat_text(processor, messages, *, generation_prompt: bool) -> str:
+    """Render Gemma chat text; tokenization is delegated to the processor."""
     return processor.apply_chat_template(
         messages,
-        tokenize=True,
+        tokenize=False,
         add_generation_prompt=generation_prompt,
         enable_thinking=False,
-    )
+    ).strip()
+
+
+def _text_ids(processor, text: str) -> list[int]:
+    """Normalize processor output across Transformers versions."""
+    encoded = processor(text=text, return_tensors=None)
+    ids = encoded["input_ids"]
+    if ids and isinstance(ids[0], list):
+        ids = ids[0]
+    return list(ids)
 
 
 def _assistant_boundary(processor, row: dict[str, Any]) -> tuple[list[int], int]:
@@ -132,12 +142,10 @@ def _assistant_boundary(processor, row: dict[str, Any]) -> tuple[list[int], int]
     therefore the reliable masking boundary; a strict proximity gate rejects
     any mismatch that occurs inside the actual user prompt.
     """
-    prompt_ids = _chat_ids(
-        processor, row["messages"][:-1], generation_prompt=True
-    )
-    full_ids = _chat_ids(
-        processor, row["messages"], generation_prompt=False
-    )
+    prompt_text = _chat_text(processor, row["messages"][:-1], generation_prompt=True)
+    full_text = _chat_text(processor, row["messages"], generation_prompt=False)
+    prompt_ids = _text_ids(processor, prompt_text)
+    full_ids = _text_ids(processor, full_text)
     boundary = 0
     for prompt_token, full_token in zip(prompt_ids, full_ids):
         if prompt_token != full_token:
@@ -176,7 +184,7 @@ def token_diagnostics(examples, processor, max_sequence_length: int):
 
 
 class QLoRAChatDataset:
-    """Lazily tokenize chat examples and train only on assistant target tokens."""
+    """Expose raw chat examples; the multimodal processor runs in the collator."""
 
     def __init__(self, examples, processor, max_sequence_length: int):
         self.examples = examples
@@ -187,41 +195,31 @@ class QLoRAChatDataset:
         return len(self.examples)
 
     def __getitem__(self, index):
-        import torch
-        row = self.examples[index]
-        full_ids, boundary = _assistant_boundary(self.processor, row)
-        if len(full_ids) > self.max_sequence_length:
-            raise RuntimeError(
-                f"{row['example_id']} has {len(full_ids)} tokens; source-preserving "
-                f"training refuses to truncate the {self.max_sequence_length}-token sequence"
-            )
-        labels = [-100] * boundary + full_ids[boundary:]
-        return {
-            "input_ids": torch.tensor(full_ids, dtype=torch.long),
-            "attention_mask": torch.ones(len(full_ids), dtype=torch.long),
-            "labels": torch.tensor(labels, dtype=torch.long),
-        }
+        return self.examples[index]
 
 
 class CompletionCollator:
-    """Right-pad variable sequences while preserving ignored prompt labels."""
+    """Process full chats and mask prompt/padding tokens from supervised loss."""
 
-    def __init__(self, pad_token_id: int):
-        self.pad_token_id = pad_token_id
+    def __init__(self, processor, max_sequence_length: int):
+        self.processor = processor
+        self.max_sequence_length = max_sequence_length
 
     def __call__(self, features):
-        import torch
-        maximum = max(len(feature["input_ids"]) for feature in features)
+        texts = [_chat_text(self.processor, row["messages"], generation_prompt=False) for row in features]
+        boundaries = [_assistant_boundary(self.processor, row)[1] for row in features]
+        batch = self.processor(text=texts, return_tensors="pt", padding=True)
+        if batch["input_ids"].shape[1] > self.max_sequence_length:
+            raise RuntimeError("A QLoRA batch exceeds max_sequence_length; truncation is disabled")
 
-        def padded(tensor, value):
-            amount = maximum - len(tensor)
-            return torch.cat([tensor, torch.full((amount,), value, dtype=tensor.dtype)])
-
-        return {
-            "input_ids": torch.stack([padded(item["input_ids"], self.pad_token_id) for item in features]),
-            "attention_mask": torch.stack([padded(item["attention_mask"], 0) for item in features]),
-            "labels": torch.stack([padded(item["labels"], -100) for item in features]),
-        }
+        labels = batch["input_ids"].clone()
+        labels[batch["attention_mask"] == 0] = -100
+        left_padding = self.processor.tokenizer.padding_side == "left"
+        for index, boundary in enumerate(boundaries):
+            padding = int((batch["attention_mask"][index] == 0).sum()) if left_padding else 0
+            labels[index, padding:padding + boundary] = -100
+        batch["labels"] = labels
+        return dict(batch)
 
 
 def _experiment_identity(name, settings, contract, dataset_manifest):
@@ -342,15 +340,12 @@ def train_or_load_adapter(
         data_seed=contract["seed"],
         remove_unused_columns=False,
     )
-    pad_token_id = processor.tokenizer.pad_token_id
-    if pad_token_id is None:
-        pad_token_id = processor.tokenizer.eos_token_id
     trainer = Trainer(
         model=model,
         args=arguments,
         train_dataset=train_dataset,
         eval_dataset=validation_dataset,
-        data_collator=CompletionCollator(pad_token_id),
+        data_collator=CompletionCollator(processor, contract["max_sequence_length"]),
     )
     last_checkpoint = get_last_checkpoint(str(checkpoint_dir))
     action = "RESUME" if last_checkpoint else "BUILD"
