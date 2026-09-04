@@ -6,6 +6,7 @@ import gc
 import importlib.metadata
 import json
 import math
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -46,7 +47,9 @@ def require_qlora_runtime() -> None:
         raise RuntimeError("QLoRA training requires a CUDA GPU")
 
 
+@lru_cache(maxsize=1)
 def _optional_hf_token() -> str | None:
+    """Read the Colab secret once so long experiments do not re-query the UI."""
     import os
     token = os.environ.get("HF_TOKEN")
     if token:
@@ -57,7 +60,9 @@ def _optional_hf_token() -> str | None:
     except (ImportError, KeyError, AttributeError):
         return None
     except Exception as error:
-        if type(error).__name__ in {"SecretNotFoundError", "NotebookAccessError"}:
+        if type(error).__name__ in {
+            "SecretNotFoundError", "NotebookAccessError", "TimeoutException"
+        }:
             return None
         raise
 
@@ -372,8 +377,11 @@ def train_or_load_adapter(
         },
     }
     write_json_atomic(manifest, manifest_path)
-    release_model(trainer, model, processor)
-    return {"action": action, "adapter_dir": adapter_dir, "manifest": manifest, "history": history}
+    output = {"action": action, "adapter_dir": adapter_dir, "manifest": manifest, "history": history}
+    # Drop the large cyclic Trainer/model graph before allocating the next rank.
+    del trainer, model, processor
+    release_model()
+    return output
 
 
 def training_history_rows(results: dict[str, dict[str, Any]]):
