@@ -157,6 +157,20 @@ class RetrievalEngine:
             raise RuntimeError("Query vector is not L2-normalized")
         return query_vector
 
+    def release_query_encoder(self) -> None:
+        """Release the embedding model before loading a memory-intensive generator."""
+        import gc
+
+        self._query_encoder = None
+        gc.collect()
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except ImportError:
+            pass
+
     def _document_field(self, document: dict[str, Any], field: str) -> Any:
         if field == "document_id":
             return document["document_id"]

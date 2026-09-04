@@ -30,6 +30,20 @@ from .paths import build_project_paths, create_artifact_directories
 from .retrieval import RetrievalEngine, load_retrieval_contract, results_to_dataframe
 from .splitting import ensure_dataset_splits
 from .vector_store import ensure_vector_store
+from .qlora_data import ensure_qlora_datasets, load_qlora_contract
+from .qlora_training import (
+    load_adapter_generator,
+    load_qlora_processor,
+    token_diagnostics,
+    train_or_load_adapter,
+    training_history_rows,
+)
+from .qlora_evaluation import (
+    comparison_rows,
+    failure_analysis,
+    score_qlora_generation,
+    select_adapter,
+)
 
 __all__ = [
     "BASE_CONFIG",
@@ -66,4 +80,15 @@ __all__ = [
     "load_gold_benchmark",
     "score_generation",
     "select_retriever",
+    "ensure_qlora_datasets",
+    "load_qlora_contract",
+    "load_adapter_generator",
+    "load_qlora_processor",
+    "token_diagnostics",
+    "train_or_load_adapter",
+    "training_history_rows",
+    "comparison_rows",
+    "failure_analysis",
+    "score_qlora_generation",
+    "select_adapter",
 ]

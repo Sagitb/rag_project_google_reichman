@@ -1,0 +1,47 @@
+{
+  "schema_version": "qlora_experiment_v1",
+  "dataset_version": "qlora_grounded_answers_v1",
+  "base_model_id": "google/gemma-4-E4B-it",
+  "system_prompt_file": "prompts/improved_grounded_rag_v3.txt",
+  "seed": 42,
+  "context_ticket_count": 5,
+  "supplement_fraction": 0.03,
+  "max_sequence_length": 4096,
+  "num_train_epochs": 2,
+  "learning_rate": 0.0002,
+  "per_device_train_batch_size": 1,
+  "per_device_eval_batch_size": 1,
+  "gradient_accumulation_steps": 4,
+  "logging_steps": 10,
+  "warmup_ratio": 0.03,
+  "lr_scheduler_type": "cosine",
+  "weight_decay": 0.0,
+  "max_grad_norm": 1.0,
+  "save_total_limit": 2,
+  "lora_dropout": 0.05,
+  "target_modules": [
+    "q_proj",
+    "k_proj",
+    "v_proj",
+    "o_proj",
+    "gate_proj",
+    "up_proj",
+    "down_proj"
+  ],
+  "experiments": {
+    "qlora_r8": {
+      "rank": 8,
+      "alpha": 16
+    },
+    "qlora_r16": {
+      "rank": 16,
+      "alpha": 32
+    }
+  },
+  "selection_policy": [
+    "invalid_citation_rate",
+    "no_answer_abstention",
+    "citation_f1",
+    "expected_point_coverage"
+  ]
+}

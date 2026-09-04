@@ -9,3 +9,6 @@ sentence-transformers>=3.0,<6
 faiss-cpu>=1.8,<2
 transformers>=5.0,<6
 accelerate>=1.0,<2
+bitsandbytes>=0.46,<1
+peft>=0.17,<1
+rouge-score>=0.1.2,<1
