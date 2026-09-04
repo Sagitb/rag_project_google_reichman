@@ -324,6 +324,18 @@ def train_or_load_adapter(
         raise RuntimeError("QLoRA token diagnostics failed; reduce context without truncating Gold evidence")
 
     use_bf16 = __import__("torch").cuda.is_bf16_supported()
+    updates_per_epoch = math.ceil(
+        len(train_dataset)
+        / (
+            contract["per_device_train_batch_size"]
+            * contract["gradient_accumulation_steps"]
+        )
+    )
+    warmup_steps = math.ceil(
+        updates_per_epoch
+        * contract["num_train_epochs"]
+        * contract["warmup_ratio"]
+    )
     arguments = TrainingArguments(
         output_dir=str(checkpoint_dir),
         num_train_epochs=contract["num_train_epochs"],
@@ -337,7 +349,9 @@ def train_or_load_adapter(
         load_best_model_at_end=True,
         metric_for_best_model="eval_loss",
         greater_is_better=False,
-        warmup_ratio=contract["warmup_ratio"],
+        # Transformers 5 removed warmup_ratio; the equivalent fixed number of
+        # optimizer warm-up steps also makes the experiment manifest explicit.
+        warmup_steps=warmup_steps,
         lr_scheduler_type=contract["lr_scheduler_type"],
         weight_decay=contract["weight_decay"],
         max_grad_norm=contract["max_grad_norm"],
