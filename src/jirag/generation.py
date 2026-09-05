@@ -7,6 +7,7 @@ import json
 import os
 import re
 import time
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Callable
 
@@ -150,7 +151,9 @@ class GroundedGenerator:
         self._model = None
 
     @staticmethod
+    @lru_cache(maxsize=1)
     def _optional_hf_token() -> str | None:
+        """Read the optional Colab secret once per runtime."""
         token = os.environ.get("HF_TOKEN")
         if token:
             return token
@@ -161,7 +164,9 @@ class GroundedGenerator:
         except (ImportError, KeyError, AttributeError):
             return None
         except Exception as error:
-            if type(error).__name__ in {"SecretNotFoundError", "NotebookAccessError"}:
+            if type(error).__name__ in {
+                "SecretNotFoundError", "NotebookAccessError", "TimeoutException"
+            }:
                 return None
             raise
 
@@ -251,6 +256,13 @@ class GroundedGenerator:
                 add_generation_prompt=True,
                 enable_thinking=False,
             )
+            if hasattr(tokens, "get") and tokens.get("input_ids") is not None:
+                token_ids = tokens["input_ids"]
+                if hasattr(token_ids, "shape"):
+                    return token_ids.shape[-1]
+                if token_ids and isinstance(token_ids[0], list):
+                    return len(token_ids[0])
+                return len(token_ids)
             return len(tokens)
 
         included_ids: list[str] = []
