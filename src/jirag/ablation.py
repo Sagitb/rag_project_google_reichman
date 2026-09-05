@@ -122,6 +122,7 @@ def score_no_rag_generation(records, generated, point_encoder, threshold: float)
         "citation_precision": None,
         "invalid_citation_rate": float(np.mean([bool(row["cited_ticket_ids"]) for row in rows])),
         "no_answer_abstention": mean(no_answer, "abstained"),
+        "answerable_abstention": mean(answerable, "abstained"),
         "overall_abstention": mean(rows, "abstained"),
         "language_match": mean(rows, "language_match"),
         "rouge_l": mean(answerable, "rouge_l"),
@@ -137,6 +138,7 @@ def four_way_metric_rows(metrics_by_system: dict[str, dict[str, Any]]):
         "gold_citation_recall": "Gold citation recall",
         "invalid_citation_rate": "Invalid/invented citation rate",
         "no_answer_abstention": "No-answer abstention",
+        "answerable_abstention": "Answerable-question abstention",
         "rouge_l": "ROUGE-L",
     }
     return [
