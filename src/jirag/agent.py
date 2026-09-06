@@ -227,6 +227,9 @@ class AdvisoryAgent:
     ) -> dict[str, Any]:
         advice_requested = AdvisoryAgent._contains(plan.semantic_query, _ADVICE_WORDS)
         risk_present = AdvisoryAgent._contains(plan.semantic_query, _RISK_WORDS)
+        answer_in_hebrew = any(
+            "\u0590" <= character <= "\u05ff" for character in plan.semantic_query
+        )
         trigger = (
             "new_ticket" if new_ticket else
             "user_request" if advice_requested else
@@ -245,13 +248,20 @@ class AdvisoryAgent:
             return advisory
         if evidence_state == "insufficient":
             advisory.update({
-                "recommendation": "Collect more incident details before choosing a specific action.",
+                "recommendation": (
+                    "יש לאסוף פרטים נוספים על האירוע לפני בחירת פעולה מסוימת."
+                    if answer_in_hebrew else
+                    "Collect more incident details before choosing a specific action."
+                ),
                 "human_approval_required": True,
             })
             return advisory
         if plan.route == "similarity":
             advisory.update({
                 "recommendation": (
+                    "יש להשוות הרשאות, היקף וסיבת שורש לאירועים המצוטטים לפני קביעת "
+                    "עדיפות, הסלמה או סימון ככפילות."
+                    if answer_in_hebrew else
                     "Compare permissions, scope and root cause with the cited incidents before assigning "
                     "priority, escalation or duplicate status."
                 ),
@@ -264,11 +274,18 @@ class AdvisoryAgent:
             and row.get("evaluation", {}).get("solution_type") == "solution-verified"
             for row in results
         )
-        recommendation = (
-            "No reopening is indicated by the verified resolution; confirm that the preventive control remains active."
-            if verified_done else
-            "Review the cited evidence before deciding whether follow-up or escalation is required."
-        )
+        if verified_done:
+            recommendation = (
+                "הפתרון המאומת אינו מצביע על צורך בפתיחה מחדש; מומלץ לוודא שהבקרה המונעת עדיין פעילה."
+                if answer_in_hebrew else
+                "No reopening is indicated by the verified resolution; confirm that the preventive control remains active."
+            )
+        else:
+            recommendation = (
+                "יש לבחון את הראיות המצוטטות לפני החלטה על מעקב נוסף או הסלמה."
+                if answer_in_hebrew else
+                "Review the cited evidence before deciding whether follow-up or escalation is required."
+            )
         advisory.update({
             "recommendation": recommendation,
             "human_approval_required": True,
