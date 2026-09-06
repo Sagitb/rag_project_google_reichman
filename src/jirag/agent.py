@@ -31,6 +31,12 @@ _RISK_WORDS = (
     "אבטחה", "רגיש", "חשיפה", "הרשאה", "נמחק", "מידע ספקים", "מחוץ לרכש",
 )
 _MULTI_WORDS = ("compare", "both", "multiple", "across", "השווה", "שניהם", "כמה תקלות")
+_ABSTENTION_PHRASES = (
+    "evidence does not resolve", "evidence is insufficient", "insufficient evidence",
+    "not enough evidence", "cannot determine", "can't determine", "cannot confirm",
+    "no supporting evidence", "אין מספיק ראיות", "הראיות אינן מספיקות",
+    "לא נמצאה ראיה", "לא ניתן לקבוע", "לא ניתן לאשר", "המידע אינו מספיק",
+)
 _PRIORITIES = ("Highest", "High", "Medium", "Low", "Lowest")
 _ENGLISH_STOPWORDS = {
     "a", "an", "and", "are", "as", "at", "be", "because", "did", "do", "does",
@@ -170,19 +176,17 @@ class AdvisoryAgent:
         if plan.route == "similarity":
             return "partial", "Similar incidents support advice, but do not prove the same root cause.", None
         lexical_support = self._lexical_support(plan.semantic_query, results)
-        if lexical_support is not None and lexical_support < 0.25:
-            return (
-                "insufficient",
-                "Retrieved tickets are broadly similar but do not support enough decisive query terms.",
-                lexical_support,
-            )
         if self._contains(plan.semantic_query, _MULTI_WORDS) and len(results) < 2:
             return "partial", "The comparative question did not retrieve multiple sources.", lexical_support
-        return "sufficient", "Relevant Jira evidence passed semantic and direct-support checks.", lexical_support
+        return (
+            "sufficient",
+            "Relevant Jira evidence passed the semantic pre-check; direct support is diagnostic only.",
+            lexical_support,
+        )
 
     @staticmethod
     def _lexical_support(question: str, results: list[dict[str, Any]]) -> float | None:
-        """Add a transparent direct-support check for English no-answer detection."""
+        """Return a transparent English token-overlap diagnostic, never a hard gate."""
         if any("\u0590" <= character <= "\u05ff" for character in question):
             return None
         query_tokens = {
@@ -200,6 +204,11 @@ class AdvisoryAgent:
             for row in results[:3]
         ).casefold()
         return sum(token in evidence_text for token in query_tokens) / len(query_tokens)
+
+    @staticmethod
+    def _is_abstention(answer: str) -> bool:
+        """Detect an explicit generator refusal after it has inspected retrieved evidence."""
+        return AdvisoryAgent._contains(answer, _ABSTENTION_PHRASES)
 
     @staticmethod
     def _deterministic_lookup(result: dict[str, Any]) -> str:
@@ -321,8 +330,16 @@ class AdvisoryAgent:
                 answer = self.generate_answer(generation_question, results)["answer"]
                 if plan.route == "similarity":
                     answer = (
-                        "New report status: the root cause and resolution have not yet been verified.\n\n"
-                        "Historical comparison:\n" + answer
+                        "New report:\nThe root cause and resolution have not yet been verified.\n\n"
+                        "Historical incidents:\n" + answer +
+                        "\n\nLimitation:\nThe cited history is an investigation lead only; it does not "
+                        "verify the cause, priority, duplicate status or resolution of the new report."
+                    )
+                elif plan.route in {"semantic", "hybrid"} and self._is_abstention(answer):
+                    evidence_state = "insufficient"
+                    evidence_reason = (
+                        "The generator inspected the retrieved context and explicitly found it "
+                        "insufficient to support the requested claim."
                     )
             else:
                 answer = self._deterministic_lookup(results[0])

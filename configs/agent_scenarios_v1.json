@@ -1,6 +1,6 @@
 {
   "schema_version": "agent_scenarios_v1",
-  "description": "Six new development scenarios; none is part of the 20-question Test Gold benchmark.",
+  "description": "Seven new development scenarios, including one Hebrew query; none is part of the 20-question Test Gold benchmark.",
   "scenarios": [
     {
       "scenario_id": "new-lookup-001",
@@ -49,6 +49,14 @@
       "expected_route": "semantic",
       "allowed_evidence_states": ["insufficient"],
       "expect_advice": false
+    },
+    {
+      "scenario_id": "new-hebrew-semantic-001",
+      "input": "האם הייתה תקלה שבה עובדים מחוץ למחלקת הרכש נחשפו למידע רגיש של ספקים, איך היא טופלה ומה כדאי למנהל לבדוק כעת?",
+      "new_ticket": false,
+      "expected_route": "semantic",
+      "allowed_evidence_states": ["sufficient"],
+      "expect_advice": true
     }
   ]
 }
