@@ -323,9 +323,16 @@ class AdvisoryAgent:
                 if plan.route == "similarity":
                     generation_question = (
                         "NEW, UNVERIFIED REPORT:\n" + plan.semantic_query +
-                        "\n\nCompare it with the historical Jira evidence. Clearly separate the new report "
-                        "from past incidents. Do not claim that a historical root cause or resolution has "
-                        "already been verified for the new report."
+                        "\n\nCompare it with the historical Jira evidence. Describe every retrieved "
+                        "source explicitly as a historical incident. Do not begin with 'the issue is "
+                        "resolved' or 'the issue is unresolved'. Do not apply a historical status, root "
+                        "cause or resolution to the new report. Begin the comparison with: "
+                        "'A historical Jira incident documents...'"
+                    )
+                if any("\u0590" <= character <= "\u05ff" for character in plan.semantic_query):
+                    generation_question += (
+                        "\n\nAnswer in Hebrew because the user's question is in Hebrew. "
+                        "Keep Jira ticket IDs unchanged."
                     )
                 answer = self.generate_answer(generation_question, results)["answer"]
                 if plan.route == "similarity":
