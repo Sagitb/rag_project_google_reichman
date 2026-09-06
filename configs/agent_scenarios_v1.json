@@ -1,0 +1,54 @@
+{
+  "schema_version": "agent_scenarios_v1",
+  "description": "Six new development scenarios; none is part of the 20-question Test Gold benchmark.",
+  "scenarios": [
+    {
+      "scenario_id": "new-lookup-001",
+      "input": "What is the current status of ticket 186?",
+      "new_ticket": false,
+      "expected_route": "lookup",
+      "allowed_evidence_states": ["sufficient"],
+      "expect_advice": false
+    },
+    {
+      "scenario_id": "new-aggregation-001",
+      "input": "How many High-priority tickets are still open?",
+      "new_ticket": false,
+      "expected_route": "aggregation",
+      "allowed_evidence_states": ["sufficient"],
+      "expect_advice": false
+    },
+    {
+      "scenario_id": "new-semantic-001",
+      "input": "Did employees outside procurement gain access to supplier information, and how was the incident handled?",
+      "new_ticket": false,
+      "expected_route": "semantic",
+      "allowed_evidence_states": ["sufficient"],
+      "expect_advice": true
+    },
+    {
+      "scenario_id": "new-hybrid-001",
+      "input": "Which open High-priority incidents concern unexpected customer-record deletion?",
+      "new_ticket": false,
+      "expected_route": "hybrid",
+      "allowed_evidence_states": ["sufficient", "partial"],
+      "expect_advice": true
+    },
+    {
+      "scenario_id": "new-ticket-advisory-001",
+      "input": "After deployment, sales users can see supplier pricing details and the sharing configuration has not yet been reviewed.",
+      "new_ticket": true,
+      "expected_route": "similarity",
+      "allowed_evidence_states": ["partial"],
+      "expect_advice": true
+    },
+    {
+      "scenario_id": "new-no-answer-001",
+      "input": "Did a biometric turnstile failure lock employees inside the office, and how was the hardware repaired?",
+      "new_ticket": false,
+      "expected_route": "semantic",
+      "allowed_evidence_states": ["insufficient"],
+      "expect_advice": false
+    }
+  ]
+}

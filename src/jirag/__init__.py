@@ -44,6 +44,7 @@ from .qlora_evaluation import (
     score_qlora_generation,
     select_adapter,
 )
+from .agent import AdvisoryAgent, AgentPlan, ensure_agent_harness, evaluate_agent_scenarios
 
 __all__ = [
     "BASE_CONFIG",
@@ -91,4 +92,8 @@ __all__ = [
     "failure_analysis",
     "score_qlora_generation",
     "select_adapter",
+    "AdvisoryAgent",
+    "AgentPlan",
+    "evaluate_agent_scenarios",
+    "ensure_agent_harness",
 ]
