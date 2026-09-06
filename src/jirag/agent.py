@@ -32,6 +32,12 @@ _RISK_WORDS = (
 )
 _MULTI_WORDS = ("compare", "both", "multiple", "across", "השווה", "שניהם", "כמה תקלות")
 _PRIORITIES = ("Highest", "High", "Medium", "Low", "Lowest")
+_ENGLISH_STOPWORDS = {
+    "a", "an", "and", "are", "as", "at", "be", "because", "did", "do", "does",
+    "for", "from", "how", "in", "is", "it", "of", "on", "or", "that", "the",
+    "their", "there", "these", "this", "to", "was", "were", "what", "when",
+    "which", "who", "why", "with",
+}
 
 
 @dataclass(frozen=True)
@@ -156,16 +162,44 @@ class AdvisoryAgent:
 
     def _evidence_state(
         self, plan: AgentPlan, results: list[dict[str, Any]], score: float | None
-    ) -> tuple[str, str]:
+    ) -> tuple[str, str, float | None]:
         if plan.route in {"lookup", "aggregation"}:
-            return "sufficient", "The result is produced by an exact deterministic tool."
+            return "sufficient", "The result is produced by an exact deterministic tool.", None
         if not results or score is None or score < self.minimum_semantic_score:
-            return "insufficient", "No sufficiently similar evidence was retrieved."
+            return "insufficient", "No sufficiently similar evidence was retrieved.", None
         if plan.route == "similarity":
-            return "partial", "Similar incidents support advice, but do not prove the same root cause."
+            return "partial", "Similar incidents support advice, but do not prove the same root cause.", None
+        lexical_support = self._lexical_support(plan.semantic_query, results)
+        if lexical_support is not None and lexical_support < 0.25:
+            return (
+                "insufficient",
+                "Retrieved tickets are broadly similar but do not support enough decisive query terms.",
+                lexical_support,
+            )
         if self._contains(plan.semantic_query, _MULTI_WORDS) and len(results) < 2:
-            return "partial", "The comparative question did not retrieve multiple sources."
-        return "sufficient", "Relevant Jira evidence passed the semantic threshold."
+            return "partial", "The comparative question did not retrieve multiple sources.", lexical_support
+        return "sufficient", "Relevant Jira evidence passed semantic and direct-support checks.", lexical_support
+
+    @staticmethod
+    def _lexical_support(question: str, results: list[dict[str, Any]]) -> float | None:
+        """Add a transparent direct-support check for English no-answer detection."""
+        if any("\u0590" <= character <= "\u05ff" for character in question):
+            return None
+        query_tokens = {
+            token for token in re.findall(r"[a-zA-Z][a-zA-Z-]+", question.casefold())
+            if len(token) >= 4 and token not in _ENGLISH_STOPWORDS
+        }
+        if not query_tokens:
+            return None
+        evidence_text = " ".join(
+            " ".join((
+                row.get("content", {}).get("summary", ""),
+                row.get("content", {}).get("component", ""),
+                row.get("content", {}).get("description", ""),
+            ))
+            for row in results[:3]
+        ).casefold()
+        return sum(token in evidence_text for token in query_tokens) / len(query_tokens)
 
     @staticmethod
     def _deterministic_lookup(result: dict[str, Any]) -> str:
@@ -175,19 +209,62 @@ class AdvisoryAgent:
         )
 
     @staticmethod
-    def _advice(plan: AgentPlan, results: list[dict[str, Any]], evidence_state: str) -> str | None:
+    def _advice(
+        plan: AgentPlan,
+        results: list[dict[str, Any]],
+        evidence_state: str,
+        *,
+        new_ticket: bool,
+    ) -> dict[str, Any]:
+        advice_requested = AdvisoryAgent._contains(plan.semantic_query, _ADVICE_WORDS)
+        risk_present = AdvisoryAgent._contains(plan.semantic_query, _RISK_WORDS)
+        trigger = (
+            "new_ticket" if new_ticket else
+            "user_request" if advice_requested else
+            "evidence_risk" if risk_present else
+            "none"
+        )
+        advisory = {
+            "level": plan.advisory_level,
+            "trigger": trigger,
+            "recommendation": None,
+            "evidence_ids": [row["document_id"] for row in results],
+            "human_approval_required": False,
+            "write_executed": False,
+        }
         if plan.advisory_level == "none":
-            return None
+            return advisory
         if evidence_state == "insufficient":
-            return "Not enough evidence is available for a specific recommendation; collect more incident details."
+            advisory.update({
+                "recommendation": "Collect more incident details before choosing a specific action.",
+                "human_approval_required": True,
+            })
+            return advisory
         if plan.route == "similarity":
-            return (
-                "Review the similar incidents and verify permissions, scope and root cause before assigning "
-                "priority, escalation or duplicate status. No Jira change has been performed."
-            )
-        if plan.advisory_level == "attention":
-            return "Because the evidence indicates potential operational or security risk, human review is recommended."
-        return "Review the cited evidence before deciding whether follow-up is required."
+            advisory.update({
+                "recommendation": (
+                    "Compare permissions, scope and root cause with the cited incidents before assigning "
+                    "priority, escalation or duplicate status."
+                ),
+                "human_approval_required": True,
+            })
+            return advisory
+
+        verified_done = bool(results) and all(
+            row.get("metadata", {}).get("status") == "Done"
+            and row.get("evaluation", {}).get("solution_type") == "solution-verified"
+            for row in results
+        )
+        recommendation = (
+            "No reopening is indicated by the verified resolution; confirm that the preventive control remains active."
+            if verified_done else
+            "Review the cited evidence before deciding whether follow-up or escalation is required."
+        )
+        advisory.update({
+            "recommendation": recommendation,
+            "human_approval_required": True,
+        })
+        return advisory
 
     @staticmethod
     def _solution_state_safe(
@@ -223,14 +300,30 @@ class AdvisoryAgent:
                 answer += f" Status breakdown: {groups}."
             results, tools, semantic_score = [], ["filter_tickets", "aggregate_tickets"], None
             evidence_state, evidence_reason = "sufficient", "Exact metadata aggregation was completed."
+            lexical_support = None
             citations = validate_citations(answer, [])
         else:
             results, tools, semantic_score = self._retrieve(plan)
-            evidence_state, evidence_reason = self._evidence_state(plan, results, semantic_score)
+            evidence_state, evidence_reason, lexical_support = self._evidence_state(
+                plan, results, semantic_score
+            )
             if evidence_state == "insufficient":
                 answer = "The retrieved Jira evidence is insufficient to answer this question reliably."
             elif plan.needs_generation:
-                answer = self.generate_answer(plan.semantic_query, results)["answer"]
+                generation_question = plan.semantic_query
+                if plan.route == "similarity":
+                    generation_question = (
+                        "NEW, UNVERIFIED REPORT:\n" + plan.semantic_query +
+                        "\n\nCompare it with the historical Jira evidence. Clearly separate the new report "
+                        "from past incidents. Do not claim that a historical root cause or resolution has "
+                        "already been verified for the new report."
+                    )
+                answer = self.generate_answer(generation_question, results)["answer"]
+                if plan.route == "similarity":
+                    answer = (
+                        "New report status: the root cause and resolution have not yet been verified.\n\n"
+                        "Historical comparison:\n" + answer
+                    )
             else:
                 answer = self._deterministic_lookup(results[0])
             citations = validate_citations(answer, [row["document_id"] for row in results])
@@ -244,9 +337,14 @@ class AdvisoryAgent:
                 "the cited ticket's documented solution state. Human review is required."
             )
 
-        advice = self._advice(plan, results, evidence_state)
-        if advice:
-            answer = f"{answer}\n\nRecommendation: {advice}"
+        advisory_results = [
+            row for row in results if row["document_id"] in citations["cited_ticket_ids"]
+        ] or results[:1]
+        advisory = self._advice(
+            plan, advisory_results, evidence_state, new_ticket=new_ticket
+        )
+        if advisory["recommendation"]:
+            answer = f"{answer}\n\nRecommendation: {advisory['recommendation']}"
 
         citation_safe = not citations["invalid_citations"]
         return {
@@ -257,13 +355,15 @@ class AdvisoryAgent:
             "evidence_state": evidence_state,
             "evidence_reason": evidence_reason,
             "semantic_score": semantic_score,
+            "lexical_support": lexical_support,
             "source_ids": [row["document_id"] for row in results],
             "citation_safe": citation_safe,
             "invalid_citations": citations["invalid_citations"],
             "solution_state_safe": solution_state_safe,
             "solution_warnings": solution_warnings,
-            "advice_present": advice is not None,
-            "write_executed": False,
+            "advice_present": advisory["recommendation"] is not None,
+            "advisory": advisory,
+            "write_executed": advisory["write_executed"],
         }
 
 

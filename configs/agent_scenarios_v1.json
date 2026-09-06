@@ -20,7 +20,7 @@
     },
     {
       "scenario_id": "new-semantic-001",
-      "input": "Did employees outside procurement gain access to supplier information, and how was the incident handled?",
+      "input": "Did employees outside procurement gain access to supplier information, how was the incident handled, and what should the manager check now?",
       "new_ticket": false,
       "expected_route": "semantic",
       "allowed_evidence_states": ["sufficient"],
