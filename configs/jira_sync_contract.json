@@ -1,0 +1,28 @@
+{
+  "contract_version": "1.0",
+  "artifact_version": "jira_live_index_v1",
+  "document_version": "jira_live_document_v1",
+  "internal_id_start": 1001,
+  "maximum_issues": 50,
+  "demo_label": "jirag-demo",
+  "jql_template": "project = {project_key} AND labels = \"{demo_label}\" ORDER BY key ASC",
+  "fields": [
+    "summary",
+    "description",
+    "status",
+    "priority",
+    "issuetype",
+    "components",
+    "labels",
+    "resolution",
+    "updated"
+  ],
+  "recognized_solution_labels": [
+    "solution-verified",
+    "solution-partial",
+    "solution-workaround",
+    "solution-unresolved"
+  ],
+  "family_label_prefix": "family-",
+  "fallback_family": "family-live-jira"
+}

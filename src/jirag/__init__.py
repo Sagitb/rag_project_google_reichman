@@ -45,6 +45,14 @@ from .qlora_evaluation import (
     select_adapter,
 )
 from .agent import AdvisoryAgent, AgentPlan, ensure_agent_harness, evaluate_agent_scenarios
+from .jira_sync import (
+    JiraCloudClient,
+    JiraSettings,
+    load_jira_contract,
+    load_jira_settings,
+    search_live_jira,
+    sync_jira_live_index,
+)
 
 __all__ = [
     "BASE_CONFIG",
@@ -96,4 +104,10 @@ __all__ = [
     "AgentPlan",
     "evaluate_agent_scenarios",
     "ensure_agent_harness",
+    "JiraCloudClient",
+    "JiraSettings",
+    "load_jira_contract",
+    "load_jira_settings",
+    "search_live_jira",
+    "sync_jira_live_index",
 ]
