@@ -128,6 +128,11 @@ class JiraCloudClient:
                 raise RuntimeError(
                     f"Jira API rejected {method} {path} ({response.status_code}): {detail}"
                 )
+            safe_text = re.sub(r"\s+", " ", response.text or "").strip()[:500]
+            if safe_text:
+                raise RuntimeError(
+                    f"Jira API rejected {method} {path} ({response.status_code}): {safe_text}"
+                )
             response.raise_for_status()
         payload = response.json()
         if not isinstance(payload, dict):
@@ -254,14 +259,12 @@ class JiraCloudClient:
                 "type": "paragraph",
                 "content": ([{"type": "text", "text": line}] if line else []),
             })
+        # Keep Create minimal because Jira projects may restrict description and
+        # priority on their Create screen. The full ADF description is applied
+        # in a separate update after Jira has returned the stable issue key.
         create_fields: dict[str, Any] = {
             "project": {"key": self.settings.project_key},
             "summary": str(source_ticket.get("summary") or normalized_source_id).strip(),
-            "description": {
-                "type": "doc",
-                "version": 1,
-                "content": paragraphs,
-            },
             "issuetype": {"id": issue_type["id"]},
             "labels": labels,
         }
@@ -274,12 +277,33 @@ class JiraCloudClient:
         issue_key = str(created.get("key") or "").strip()
         if not issue_key:
             raise RuntimeError("Jira created the demo issue without returning its key")
+        description_response = self.session.request(
+            "PUT",
+            f"{self.settings.normalized_base_url}/rest/api/3/issue/{issue_key}",
+            timeout=30,
+            headers={"Content-Type": "application/json"},
+            json={
+                "fields": {
+                    "description": {
+                        "type": "doc",
+                        "version": 1,
+                        "content": paragraphs,
+                    }
+                }
+            },
+        )
+        description_updated = bool(description_response.ok)
         issue = self._request(
             "GET",
             f"/rest/api/3/issue/{issue_key}",
             params={"fields": ",".join(contract["fields"])},
         )
-        return {"action": "CREATED", "issue": issue, "source_label": source_label}
+        return {
+            "action": "CREATED",
+            "issue": issue,
+            "source_label": source_label,
+            "description_updated": description_updated,
+        }
 
 
 def adf_to_text(value: Any) -> str:
