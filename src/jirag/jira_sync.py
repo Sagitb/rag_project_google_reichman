@@ -165,6 +165,81 @@ class JiraCloudClient:
                 break
         return issues[: contract["maximum_issues"]]
 
+    def ensure_demo_issue(
+        self,
+        *,
+        source_ticket: dict[str, str],
+        contract: dict[str, Any],
+        source_id: str = "tckt-0186",
+    ) -> dict[str, Any]:
+        """Create one traceable demo issue once, leaving its Jira workflow untouched."""
+        normalized_source_id = source_id.strip().casefold()
+        if not re.fullmatch(r"tckt-\d{4}", normalized_source_id):
+            raise ValueError("source_id must use the tckt-0000 format")
+        source_label = f"source-{normalized_source_id}"
+        jql = (
+            f'project = "{self.settings.project_key}" '
+            f'AND labels = "{source_label}" ORDER BY key ASC'
+        )
+        existing = self._request(
+            "POST",
+            "/rest/api/3/search/jql",
+            headers={"Content-Type": "application/json"},
+            json={
+                "jql": jql,
+                "fields": contract["fields"],
+                "maxResults": 2,
+            },
+        ).get("issues", [])
+        if existing:
+            return {"action": "FOUND", "issue": existing[0], "source_label": source_label}
+
+        labels = [contract["demo_label"], source_label]
+        for key in ("family", "solution_type"):
+            value = str(source_ticket.get(key) or "").strip()
+            if value:
+                labels.append(value)
+        description = str(source_ticket.get("description") or "").strip()
+        source_status = str(source_ticket.get("status") or "Unknown").strip()
+        description += (
+            "\n\nDEMO IMPORT METADATA\n"
+            f"Source dataset ID: {normalized_source_id}\n"
+            f"Source dataset status: {source_status}\n"
+            "The Jira workflow status is intentionally not changed automatically."
+        )
+        create_fields: dict[str, Any] = {
+            "project": {"key": self.settings.project_key},
+            "summary": str(source_ticket.get("summary") or normalized_source_id).strip(),
+            "description": {
+                "type": "doc",
+                "version": 1,
+                "content": [{
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": description}],
+                }],
+            },
+            "issuetype": {"name": str(source_ticket.get("work_type") or "Task").strip()},
+            "labels": labels,
+        }
+        priority = str(source_ticket.get("priority") or "").strip()
+        if priority:
+            create_fields["priority"] = {"name": priority}
+        created = self._request(
+            "POST",
+            "/rest/api/3/issue",
+            headers={"Content-Type": "application/json"},
+            json={"fields": create_fields},
+        )
+        issue_key = str(created.get("key") or "").strip()
+        if not issue_key:
+            raise RuntimeError("Jira created the demo issue without returning its key")
+        issue = self._request(
+            "GET",
+            f"/rest/api/3/issue/{issue_key}",
+            params={"fields": ",".join(contract["fields"])},
+        )
+        return {"action": "CREATED", "issue": issue, "source_label": source_label}
+
 
 def adf_to_text(value: Any) -> str:
     """Flatten Jira's Atlassian Document Format into readable plain text."""
