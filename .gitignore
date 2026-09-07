@@ -102,6 +102,7 @@ service_account.json
 
 *.pem
 *.key
+keys.txt
 
 # Colab/Jupyter secrets must never be committed
 .streamlit/secrets.toml
