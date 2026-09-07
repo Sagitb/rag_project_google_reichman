@@ -115,7 +115,20 @@ class JiraCloudClient:
             timeout=30,
             **kwargs,
         )
-        response.raise_for_status()
+        if not response.ok:
+            try:
+                error_payload = response.json()
+            except ValueError:
+                error_payload = {}
+            messages = list(error_payload.get("errorMessages") or [])
+            field_errors = error_payload.get("errors") or {}
+            messages.extend(f"{field}: {message}" for field, message in field_errors.items())
+            detail = "; ".join(str(message) for message in messages if message)
+            if detail:
+                raise RuntimeError(
+                    f"Jira API rejected {method} {path} ({response.status_code}): {detail}"
+                )
+            response.raise_for_status()
         payload = response.json()
         if not isinstance(payload, dict):
             raise RuntimeError("Jira returned a non-object JSON response")
@@ -133,6 +146,31 @@ class JiraCloudClient:
             "project_name": str(project.get("name", "Unknown")),
             "project_key": str(project.get("key", self.settings.project_key)),
         }
+
+    def _select_project_issue_type(self, preferred_name: str) -> dict[str, str]:
+        """Resolve a createable issue type from the selected project's real schema."""
+        project = self._request(
+            "GET",
+            f"/rest/api/3/project/{self.settings.project_key}",
+            params={"expand": "issueTypes"},
+        )
+        issue_types = [
+            item for item in project.get("issueTypes", [])
+            if isinstance(item, dict) and item.get("id") and not item.get("subtask", False)
+        ]
+        if not issue_types:
+            raise RuntimeError("The selected Jira project exposes no createable issue type")
+        preferred = preferred_name.strip().casefold()
+        fallbacks = (preferred, "task", "story", "bug")
+        for candidate in fallbacks:
+            match = next(
+                (item for item in issue_types if str(item.get("name", "")).casefold() == candidate),
+                None,
+            )
+            if match:
+                return {"id": str(match["id"]), "name": str(match.get("name", "Issue"))}
+        first = issue_types[0]
+        return {"id": str(first["id"]), "name": str(first.get("name", "Issue"))}
 
     def fetch_project_issues(self, contract: dict[str, Any]) -> list[dict[str, Any]]:
         """Fetch up to the approved POC limit through enhanced JQL search."""
@@ -207,23 +245,26 @@ class JiraCloudClient:
             f"Source dataset status: {source_status}\n"
             "The Jira workflow status is intentionally not changed automatically."
         )
+        issue_type = self._select_project_issue_type(
+            str(source_ticket.get("work_type") or "Task")
+        )
+        paragraphs = []
+        for line in description.splitlines():
+            paragraphs.append({
+                "type": "paragraph",
+                "content": ([{"type": "text", "text": line}] if line else []),
+            })
         create_fields: dict[str, Any] = {
             "project": {"key": self.settings.project_key},
             "summary": str(source_ticket.get("summary") or normalized_source_id).strip(),
             "description": {
                 "type": "doc",
                 "version": 1,
-                "content": [{
-                    "type": "paragraph",
-                    "content": [{"type": "text", "text": description}],
-                }],
+                "content": paragraphs,
             },
-            "issuetype": {"name": str(source_ticket.get("work_type") or "Task").strip()},
+            "issuetype": {"id": issue_type["id"]},
             "labels": labels,
         }
-        priority = str(source_ticket.get("priority") or "").strip()
-        if priority:
-            create_fields["priority"] = {"name": priority}
         created = self._request(
             "POST",
             "/rest/api/3/issue",
