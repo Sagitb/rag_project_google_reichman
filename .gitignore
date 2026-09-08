@@ -177,3 +177,8 @@ desktop.ini
 *.bak
 *.log
 *~
+
+# ----------------------------
+# Tests
+# ----------------------------
+jiRAG_SELECTED_DEMO_TESTS.md
