@@ -4,6 +4,8 @@
 [![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-181717?logo=github)](https://github.com/Sagitb/rag_project_google_reichman)
 [![Personal AI Portfolio](https://img.shields.io/badge/Personal-AI%20Portfolio-blue?logo=github)](https://github.com/Ouriel91/ai-deep-learning-course/tree/main/project_03_jiRAG)
 
+<!-- Replace the article and presentation placeholders after those files are uploaded. -->
+
 `jiRAG` is an end-to-end Retrieval-Augmented Generation system over an approved corpus of **1,000 anonymized Jira-style tickets**. It combines validated data preparation, multilingual semantic retrieval, a persistent FAISS vector store, cross-encoder reranking, grounded generation with Gemma 4, QLoRA fine-tuning, a read-only Agent, incremental Jira synchronization and a manager-facing Gradio chat.
 
 The system answers questions about incidents, causes, resolutions and validation evidence while returning traceable citations such as `[tckt-0186]`. It also supports exact lookup, filtering, aggregation and hybrid retrieval, and is designed to abstain when the supplied Jira evidence is insufficient.
@@ -295,23 +297,31 @@ MyDrive/jiRAG/artifacts/
 
 ## 1. Clone or open the project
 
+Choose one of the following options:
+
+- Clone the repository:
+
 ```bash
 git clone https://github.com/Sagitb/rag_project_google_reichman.git
 ```
 
-Open `jiRAG.ipynb` in Google Colab using the badge at the top.
+- Or open the notebook directly in Google Colab using the **Open in Colab** link at the top of this README.
+
+In both cases, the project is executed from the `jiRAG.ipynb` notebook.
 
 ## 2. Select a GPU and mount Drive
 
-Gemma generation and QLoRA require CUDA. Section 0 mounts Drive, initializes persistent artifact folders and pulls repository changes.
+Gemma generation and QLoRA require CUDA. Section 0 mounts Google Drive, initializes the persistent artifact folders and pulls the repository files required by the notebook.
 
 ## 3. Configure Colab Secrets
 
-For gated Hugging Face model access:
+For Hugging Face access:
 
 ```text
-HF_TOKEN - is optional but recommended for authenticated Hugging Face access, higher download limits, and models that may require accepted access terms.
+HF_TOKEN
 ```
+
+`HF_TOKEN` is optional but recommended for authenticated Hugging Face access, higher download limits and models that may require accepted access terms.
 
 For Jira integration:
 
@@ -322,15 +332,17 @@ JIRA_API_TOKEN
 JIRA_PROJECT_KEY
 ```
 
-Never store secret values in the notebook, Git or saved outputs.
+Never store secret values directly in the notebook, Git repository or saved outputs.
 
 ## 4. Run the workflow
 
-Execute sections in order on the first complete run. Compatible artifacts are loaded automatically later.
+Run the cells in `jiRAG.ipynb` in order, or select **Runtime → Run all** for the first complete execution.
 
-> **Important:** Do not use **Run all** merely to reopen the demo. QLoRA and Evaluation artifacts are persistent. Use the notebook's `BUILD / LOAD / RESUME` behavior and run only the required sections when compatible artifacts exist.
+On later executions, compatible artifacts can be loaded automatically. To reopen only the saved demo, you may run the required sections instead of repeating the QLoRA training and evaluation stages.
 
-> **Live Jira demo:** Create or update an issue with `jirag-demo`, then click **Sync Jira now**. It becomes searchable without rebuilding the frozen index.
+> **Important:** Always run the project through `jiRAG.ipynb`, whether you cloned the repository or opened it directly through the Colab link.
+
+> **Live Jira demo:** Create or update an issue with the `jirag-demo` label, then click **Sync Jira now**. The issue becomes searchable without rebuilding the frozen index.
 
 ---
 
