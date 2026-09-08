@@ -4,7 +4,6 @@
 [![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-181717?logo=github)](https://github.com/Sagitb/rag_project_google_reichman)
 [![Personal AI Portfolio](https://img.shields.io/badge/Personal-AI%20Portfolio-blue?logo=github)](https://github.com/Ouriel91/ai-deep-learning-course/tree/main/project_03_jiRAG)
 
-
 `jiRAG` is an end-to-end Retrieval-Augmented Generation system over an approved corpus of **1,000 anonymized Jira-style tickets**. It combines validated data preparation, multilingual semantic retrieval, a persistent FAISS vector store, cross-encoder reranking, grounded generation with Gemma 4, QLoRA fine-tuning, a read-only Agent, incremental Jira synchronization and a manager-facing Gradio chat.
 
 The system answers questions about incidents, causes, resolutions and validation evidence while returning traceable citations such as `[tckt-0186]`. It also supports exact lookup, filtering, aggregation and hybrid retrieval, and is designed to abstain when the supplied Jira evidence is insufficient.
@@ -311,10 +310,10 @@ Gemma generation and QLoRA require CUDA. Section 0 mounts Drive, initializes per
 For gated Hugging Face model access:
 
 ```text
-HF_TOKEN
+HF_TOKEN - is optional but recommended for authenticated Hugging Face access, higher download limits, and models that may require accepted access terms.
 ```
 
-For optional Jira integration:
+For Jira integration:
 
 ```text
 JIRA_BASE_URL
