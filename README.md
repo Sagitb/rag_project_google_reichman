@@ -203,6 +203,14 @@ Gemma is loaded with 4-bit NF4 double quantization. The base model remains froze
 
 Training uses 750 single-source examples plus small multi-source and no-answer supplements. Prompt and padding tokens are masked from supervised loss, and silent truncation is prohibited. The adapters tied on protected Validation criteria, so `qlora_r8` was selected for efficiency. Test was not used for selection.
 
+### Training and Validation loss
+
+![QLoRA Rank 8 and Rank 16 Training and Validation loss](docs/images/qlora_rank_loss.png)
+
+Both adapters converged across the two-epoch experiment. Although `qlora_r16`
+reached a lower language-model loss, the adapters tied on the protected
+behavioral criteria, so `qlora_r8` was selected as the more efficient option.
+
 ---
 
 # 🧪 Evaluation
