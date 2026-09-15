@@ -118,6 +118,7 @@ keys.txt
 *.doc
 *.docx
 
+!report.pdf
 
 # ----------------------------
 # Jupyter and Colab
